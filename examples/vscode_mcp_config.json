@@ -1,0 +1,9 @@
+{
+  "servers": {
+    "wingman": {
+      "type": "stdio",
+      "command": "python",
+      "args": ["-m", "wingman"]
+    }
+  }
+}

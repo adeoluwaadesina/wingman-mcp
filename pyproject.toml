@@ -1,0 +1,47 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "wingman-mcp"
+version = "0.1.0"
+description = "An open-source MCP server that gives Claude conversations a persistent, interactive plan/to-do panel."
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "Adeolu Adesina" }]
+requires-python = ">=3.10"
+keywords = ["mcp", "claude", "plan", "todo", "agent", "model-context-protocol"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "mcp>=1.2.0",
+    "pydantic>=2.0",
+    "platformdirs>=4.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0", "pytest-asyncio>=0.21"]
+
+[project.scripts]
+wingman = "wingman.__main__:main"
+
+[project.urls]
+Homepage = "https://github.com/adeolu/wingman"
+Repository = "https://github.com/adeolu/wingman"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+wingman = ["ui/static/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
