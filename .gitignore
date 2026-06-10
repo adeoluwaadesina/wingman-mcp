@@ -4,6 +4,9 @@ CLAUDE_CODE_HANDOVER.md
 WINGMAN_HANDOVER_v2.md
 V0_1_SHIP_AUDIT.md
 tests/manual/
+CLAUDE_CODE_HANDOVER*.md
+WINGMAN_HANDOVER*.md
+
 
 # Python
 __pycache__/
