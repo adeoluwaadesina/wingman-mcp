@@ -28,7 +28,11 @@ log = logging.getLogger("wingman")
 
 PlanName = Annotated[
     str,
-    Field(min_length=1, max_length=64, description="Plan name (letters, digits, space, hyphen, underscore)"),
+    Field(
+        min_length=1,
+        max_length=64,
+        description="Plan name (letters, digits, space, hyphen, underscore, apostrophe, period, colon, parentheses)",
+    ),
 ]
 TaskContent = Annotated[str, Field(min_length=1, max_length=2000)]
 TaskStatus = Literal["pending", "in_progress", "done", "blocked"]
@@ -158,6 +162,21 @@ def build_server() -> FastMCP:
     def delete_plan(plan_name: PlanName) -> dict[str, Any]:
         return plan_tools.delete_plan(plan_name)
 
+    @mcp.tool(
+        meta=SHOW_PLAN_META,
+        description="Render a clickable list of all plans as an interactive panel. Use this when the user wants to see or pick from their plans.",
+    )
+    def show_plans() -> CallToolResult:
+        # Binds to the same ui://wingman/panel resource as show_plan. The panel
+        # detects mode from structuredContent shape: `plans` → picker, `plan` → task view.
+        result = plan_tools.list_plans()
+        return CallToolResult(
+            content=[TextContent(type="text", text=result.get("text", ""))],
+            structuredContent=result,
+            _meta=_panel_result_meta(),
+            isError=False,
+        )
+
     # -----------------------------------------------------------------
     # UI-only tools (visibility = ["app"])
     # -----------------------------------------------------------------
@@ -165,6 +184,10 @@ def build_server() -> FastMCP:
     @mcp.tool(name="_ui_get_plan", meta=APP_ONLY, description="Internal: fetch plan state for live polling.")
     def _ui_get_plan(plan_name: PlanName) -> dict[str, Any]:
         return ui_tools.get_plan(plan_name)
+
+    @mcp.tool(name="_ui_list_plans", meta=APP_ONLY, description="Internal: fetch plan list for picker polling.")
+    def _ui_list_plans() -> dict[str, Any]:
+        return ui_tools.list_plans()
 
     @mcp.tool(name="_ui_tick_task", meta=APP_ONLY, description="Internal: tick from UI.")
     def _ui_tick_task(plan_name: PlanName, task_id: int) -> dict[str, Any]:

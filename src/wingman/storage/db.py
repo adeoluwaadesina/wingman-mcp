@@ -144,11 +144,12 @@ def get_plan(name: str) -> Plan:
                 content=r["content"],
                 status=r["status"],
                 sort_order=r["sort_order"],
+                position=idx + 1,
                 created_at=_parse_dt(r["created_at"]),
                 updated_at=_parse_dt(r["updated_at"]),
                 completed_at=_parse_dt(r["completed_at"]) if r["completed_at"] else None,
             )
-            for r in trows
+            for idx, r in enumerate(trows)
         ],
     )
 

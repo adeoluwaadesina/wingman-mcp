@@ -28,8 +28,15 @@
   }
   window.__WINGMAN_BOOTED__ = true;
 
-  const POLL_MS = 2500;
+  const POLL_FAST_MS = 2500;
+  const POLL_SLOW_MS = 10000;
+  const IDLE_THRESHOLD_MS = 30000;
   const THEME_KEY = "wingman:theme";
+
+  let lastChangeAt = Date.now();
+  let currentPollMs = POLL_FAST_MS;
+  let lastPolledSig = "";
+  let cameFromPicker = false;
 
   const stage = document.getElementById("stage");
   const $ = (sel) => stage.querySelector(sel);
@@ -127,15 +134,40 @@
   }
 
   // ---------- Render ----------
-  function render(payload) {
+  function render(payload, fromPoll) {
+    if (payload && Array.isArray(payload.plans) && !payload.plan) {
+      renderPicker(payload.plans, fromPoll);
+      return;
+    }
     const plan = payload && payload.plan;
     if (!plan) return;
+    // Switching from picker mode to plan view
+    $role("picker").hidden = true;
+    $role("add-form").removeAttribute("hidden");
+    $role("back-link").hidden = !cameFromPicker;
+    $role("menu-toggle").hidden = false;
+    $role("theme-toggle").hidden = false;
+    if (fromPoll) {
+      const sig = JSON.stringify(plan);
+      if (sig !== lastPolledSig) {
+        lastChangeAt = Date.now();
+        lastPolledSig = sig;
+      }
+    } else {
+      lastPolledSig = JSON.stringify(plan);
+      lastChangeAt = Date.now();
+    }
     state.plan = plan;
+    state.plans = null;
     currentPlanName = plan.name;
     stage.dataset.plan = plan.name;
 
-    if ($role("title").getAttribute("contenteditable") !== "true") {
-      $role("title").textContent = plan.name;
+    const titleEl = $role("title");
+    titleEl.style.cursor = "";
+    titleEl.style.pointerEvents = "";
+    // contenteditable stays "false" until user clicks — existing click handler manages that.
+    if (titleEl.getAttribute("contenteditable") !== "true") {
+      titleEl.textContent = plan.name;
     }
     const c = plan.counts || {};
     const total = c.total || 0;
@@ -174,6 +206,78 @@
     refreshMenuState();
   }
 
+  function renderPicker(plans, fromPoll) {
+    if (fromPoll) {
+      const sig = JSON.stringify(plans);
+      if (sig !== lastPolledSig) {
+        lastChangeAt = Date.now();
+        lastPolledSig = sig;
+      }
+    } else {
+      lastPolledSig = JSON.stringify(plans);
+      lastChangeAt = Date.now();
+    }
+    state.plans = plans;
+    state.plan = null;
+
+    $role("progress").hidden = true;
+    $role("task-list").hidden = true;
+    $role("empty").hidden = true;
+    $role("add-form").setAttribute("hidden", "");
+    $role("back-link").hidden = true;
+    $role("picker").hidden = false;
+    $role("menu-toggle").hidden = true;
+    $role("theme-toggle").hidden = true;
+    closeMenu();
+
+    const titleEl = $role("title");
+    titleEl.setAttribute("contenteditable", "false");
+    titleEl.style.cursor = "default";
+    titleEl.style.pointerEvents = "none";
+    titleEl.textContent = "Your plans";
+    $role("subtitle").textContent = plans.length + " plan" + (plans.length === 1 ? "" : "s");
+    $role("status").textContent = "";
+
+    const list = $role("picker-list");
+    list.innerHTML = "";
+    if (plans.length === 0) {
+      const li = document.createElement("li");
+      li.className = "picker-empty";
+      li.textContent = "No plans yet. Ask Claude to create one.";
+      list.appendChild(li);
+      return;
+    }
+    for (const p of plans) {
+      const li = document.createElement("li");
+      li.className = "picker-row";
+      li.innerHTML = `
+        <span class="picker-name"></span>
+        <span class="picker-meta"></span>
+        <svg class="picker-chevron" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+          <path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>
+        </svg>
+      `;
+      li.querySelector(".picker-name").textContent = p.name;
+      li.querySelector(".picker-meta").textContent = (p.done || 0) + "/" + (p.total || 0) + " done";
+      li.addEventListener("click", () => openPlan(p.name));
+      list.appendChild(li);
+    }
+  }
+
+  async function openPlan(name) {
+    cameFromPicker = true;
+    currentPlanName = name;
+    stage.dataset.plan = name;
+    $role("picker").hidden = true;
+    $role("add-form").removeAttribute("hidden");
+    lastPolledSig = "";
+    lastChangeAt = Date.now();
+    currentPollMs = POLL_FAST_MS;
+    const res = await callTool("_ui_get_plan", { plan_name: name });
+    if (res) render(res);
+    startPoll();
+  }
+
   function renderTasks(tasks) {
     const list = $role("task-list");
     list.innerHTML = "";
@@ -189,18 +293,19 @@
     if (t.status === "in_progress") li.classList.add("is-in-progress");
     li.dataset.taskId = String(t.id);
 
+    const pos = t.position || t.id;
     li.innerHTML = `
       <span class="drag-handle" aria-hidden="true">&#x2807;&#x2807;</span>
-      <button class="checkbox" role="checkbox" aria-checked="${t.status === "done"}" aria-label="Toggle done">
+      <button class="checkbox" role="checkbox" aria-checked="${t.status === "done"}" aria-label="Toggle task ${pos} done">
         <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
           <path d="M5 12l4 4 10-10" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
       </button>
       <span class="task-text"></span>
-      <button class="row-btn delete" aria-label="Delete task">
+      <button class="row-btn delete" aria-label="Delete task ${pos}">
         <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
       </button>
-      <button class="row-btn run" aria-label="Run this task">
+      <button class="row-btn run" aria-label="Run task ${pos}">
         <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M7 5l12 7-12 7z" fill="currentColor"/></svg>
       </button>
     `;
@@ -282,66 +387,82 @@
     toggleMenu();
   });
 
-  // Trigger a browser download of text as a file.
-  function downloadFile(filename, text, mime) {
-    try {
-      const blob = new Blob([text], { type: mime || "text/markdown" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      return true;
-    } catch (err) {
-      console.error("[wingman] download failed", err);
-      return false;
-    }
+  // Sandboxed iframes block confirm() — render an in-panel banner instead.
+  function showInlineConfirm(message, onConfirm) {
+    const existing = document.getElementById("wingman-confirm");
+    if (existing) existing.remove();
+    const bar = document.createElement("div");
+    bar.id = "wingman-confirm";
+    bar.className = "confirm-bar";
+    bar.innerHTML = `
+      <span class="confirm-msg"></span>
+      <button class="confirm-yes">Yes</button>
+      <button class="confirm-no">Cancel</button>
+    `;
+    bar.querySelector(".confirm-msg").textContent = message;
+    bar.querySelector(".confirm-yes").addEventListener("click", () => {
+      bar.remove();
+      onConfirm();
+    });
+    bar.querySelector(".confirm-no").addEventListener("click", () => {
+      bar.remove();
+    });
+    stage.insertBefore(bar, $role("add-form"));
   }
-
-  function slugify(name) {
-    return (name || "plan").replace(/[^a-z0-9_-]+/gi, "-").replace(/^-+|-+$/g, "") || "plan";
-  }
-
-  // Deferred to v0.2 — disabled in the menu markup. Defense in depth: even if a
-  // click leaks past pointer-events:none, never invoke the underlying tool.
-  const DISABLED_ACTIONS = new Set(["clear-all", "export", "delete-plan"]);
 
   async function handleMenuAction(action) {
-    if (DISABLED_ACTIONS.has(action)) {
-      console.debug("[wingman] menu action deferred to v0.2:", action);
-      return;
-    }
     closeMenu();
     try {
-      if (action === "rename") {
+      if (action === "all-plans") {
+        currentPlanName = null;
+        stage.dataset.plan = "";
+        cameFromPicker = false;
+        stopPoll();
+        $role("back-link").hidden = true;
+        lastPolledSig = "";
+        lastChangeAt = Date.now();
+        currentPollMs = POLL_FAST_MS;
+        const res = await callTool("_ui_list_plans", {});
+        if (res) render(res);
+        startPoll();
+      } else if (action === "rename") {
         startTitleEdit();
       } else if (action === "clear-completed") {
         await callTool("_ui_clear_completed", { plan_name: currentPlanName });
         await refresh();
       } else if (action === "clear-all") {
-        if (confirm("Clear all tasks in this plan?")) {
+        showInlineConfirm("Clear all tasks in this plan?", async () => {
           await callTool("_ui_clear_all", { plan_name: currentPlanName });
           await refresh();
-        }
+        });
       } else if (action === "export") {
+        // Clipboard is unavailable (ui:// is not a secure context) and Blob
+        // downloads are sandbox-blocked. Send the markdown as a chat message
+        // instead — visible, copyable, no permissions needed.
         const res = await callTool("_ui_export_markdown", { plan_name: currentPlanName });
         const md = res && (res.markdown || res.text);
         if (md) {
-          const ok = downloadFile(slugify(currentPlanName) + ".md", md, "text/markdown");
-          setStatus(ok ? "Exported markdown" : "Export failed — see console");
-          if (ok) setTimeout(() => setStatus(""), 2000);
+          const sent = await sendChatMessage(md);
+          if (sent) {
+            setStatus("Exported to chat ✓");
+            setTimeout(() => setStatus(""), 2500);
+          } else {
+            setStatus("Export failed — host can't receive messages");
+          }
         } else {
           setStatus("Nothing to export");
         }
       } else if (action === "delete-plan") {
-        if (confirm("Delete this entire plan? This cannot be undone.")) {
+        showInlineConfirm("Delete this entire plan? This cannot be undone.", async () => {
           const res = await callTool("_ui_delete_plan", { plan_name: currentPlanName });
-          if (res !== null) {
-            handlePlanDeleted();
-          }
+          if (res !== null) handlePlanDeleted();
+        });
+      } else if (action === "build-from-chat") {
+        const res = await callTool("_ui_get_build_from_chat_prompt", { plan_name: currentPlanName });
+        const text = res && (res.prompt || res.text);
+        if (text) {
+          const sent = await sendChatMessage(text);
+          if (!sent) setStatus("This host can't auto-send messages.");
         }
       }
     } catch (err) {
@@ -350,31 +471,28 @@
     }
   }
 
-  // After the plan is gone, stop polling, clear state, and ask the host to
-  // tear down the View. If teardown isn't supported, fall back to a message.
+  // After the plan is gone, stop polling, clear state, and navigate to the
+  // picker so the user sees their remaining plans immediately.
   function handlePlanDeleted() {
     stopPoll();
     state.plan = null;
     currentPlanName = null;
-    setStatus("Plan deleted.");
-    let requested = false;
-    if (app && typeof app.requestTeardown === "function") {
-      try {
-        app.requestTeardown();
-        requested = true;
-      } catch (err) {
-        console.error("[wingman] requestTeardown failed", err);
-      }
-    }
-    if (!requested) {
-      // No teardown channel — blank the panel body so it doesn't look live.
-      $role("progress").hidden = true;
-      $role("task-list").hidden = true;
-      const empty = $role("empty");
-      empty.hidden = false;
-      $role("title").textContent = "Plan deleted";
-      $role("subtitle").textContent = "";
-    }
+    stage.dataset.plan = "";
+    cameFromPicker = false;
+    $role("back-link").hidden = true;
+    $role("menu-toggle").hidden = true;
+    $role("theme-toggle").hidden = true;
+    const titleEl = $role("title");
+    titleEl.setAttribute("contenteditable", "false");
+    titleEl.style.cursor = "default";
+    titleEl.style.pointerEvents = "none";
+    lastPolledSig = "";
+    lastChangeAt = Date.now();
+    currentPollMs = POLL_FAST_MS;
+    callTool("_ui_list_plans", {}).then((res) => {
+      if (res) render(res);
+      startPoll();
+    });
   }
 
   $$('.menu button').forEach((btn) => {
@@ -480,19 +598,46 @@
     });
   }
 
-  // ---------- Polling ----------
-  async function refresh() {
-    if (!currentPlanName) return;
-    const res = await callTool("_ui_get_plan", { plan_name: currentPlanName });
+  // ---------- Back link (picker entry only) ----------
+  $role("back-link").addEventListener("click", async () => {
+    currentPlanName = null;
+    stage.dataset.plan = "";
+    cameFromPicker = false;
+    stopPoll();
+    $role("back-link").hidden = true;
+    lastPolledSig = "";
+    lastChangeAt = Date.now();
+    currentPollMs = POLL_FAST_MS;
+    const res = await callTool("_ui_list_plans", {});
     if (res) render(res);
+    startPoll();
+  });
+
+  // ---------- Polling ----------
+  async function refresh(fromPoll) {
+    if (currentPlanName) {
+      const res = await callTool("_ui_get_plan", { plan_name: currentPlanName });
+      if (res) render(res, fromPoll);
+    } else {
+      const res = await callTool("_ui_list_plans", {});
+      if (res) render(res, fromPoll);
+    }
   }
 
   let pollTimer = null;
   function startPoll() {
     stopPoll();
     pollTimer = setInterval(() => {
-      if (document.visibilityState === "visible" && busy === 0) refresh();
-    }, POLL_MS);
+      if (document.visibilityState !== "visible" || busy !== 0) return;
+      const idleMs = Date.now() - lastChangeAt;
+      const targetMs = idleMs > IDLE_THRESHOLD_MS ? POLL_SLOW_MS : POLL_FAST_MS;
+      if (targetMs !== currentPollMs) {
+        currentPollMs = targetMs;
+        startPoll();
+        return;
+      }
+      refresh(true);
+    }, currentPollMs);
   }
   function stopPoll() {
     if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
@@ -522,9 +667,14 @@
     if (params && params.isError) return;
     const payload = unwrap(params);
     if (payload && payload.plan) {
+      // Direct show_plan from Claude (not via picker click) — drop the back link.
+      cameFromPicker = false;
+      render(payload);
+    } else if (payload && Array.isArray(payload.plans)) {
+      currentPlanName = null;
+      stage.dataset.plan = "";
       render(payload);
     } else if (!currentPlanName) {
-      // No structuredContent.plan but maybe we learned the name elsewhere.
       refresh();
     }
   }
@@ -539,7 +689,7 @@
     }
     // Create + connect the App EXACTLY ONCE. The instance is stashed on window
     // so even a pathological re-import can't spawn a second initialize.
-    app = new SDK.App({ name: "wingman", version: "0.1.0" });
+    app = new SDK.App({ name: "wingman", version: "0.2.0" });
     window.__WINGMAN_APP__ = app;
 
     // Register listeners BEFORE connect so we don't miss the initial render data.

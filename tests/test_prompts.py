@@ -11,9 +11,10 @@ def test_run_task_prompt_basic():
     text = prompts.render_run_task_prompt("p", tid)
     assert "**p**" in text
     assert "only" in text
-    assert f'task_id={tid}' in text
-    assert 'plan_name="p"' in text
-    assert "tick_task" in text
+    # v0.2 (post-impl): tick_task / task_id instructions removed from template —
+    # Claude has tick_task available and decides when to call it from context.
+    assert "tick_task" not in text
+    assert "task_id" not in text
 
 
 def test_run_task_prompt_is_lean_no_plan_enumeration():
@@ -34,8 +35,8 @@ def test_run_task_prompt_is_lean_no_plan_enumeration():
     assert "alpha-done" not in text
     assert "bravo-sibling" not in text
     assert "delta-sibling" not in text
-    # It is short — a couple of lines, not a state dump.
-    assert text.count("\n") <= 4
+    # It is short — a handful of lines, not a state dump.
+    assert text.count("\n") <= 6
 
 
 def test_build_from_chat_prompt():

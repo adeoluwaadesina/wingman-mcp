@@ -181,7 +181,7 @@ Checkbox turns green, strikethrough applied, progress bar advances. State syncs 
 
 **3-dot menu**
 
-Rename plan and Clear completed work now. Clear all, Export markdown, and Delete plan are coming in v0.2.
+Rename plan, Clear completed, Build from conversation, Clear all tasks, Export as markdown, and Delete plan.
 
 </td>
 </tr>
@@ -205,12 +205,13 @@ Rename plan and Clear completed work now. Clear all, Export markdown, and Delete
 
 ## Tool reference
 
-Wingman exposes 11 tools to Claude. You don't call these directly — just describe what you want and Claude picks the right one.
+Wingman exposes 12 tools to Claude. You don't call these directly — just describe what you want and Claude picks the right one.
 
 | Tool | What it does |
 |---|---|
 | `create_plan` | Create a new named plan with optional initial tasks |
 | `show_plan` | Render the interactive panel inline in chat |
+| `show_plans` | Render a clickable plan picker inline in chat |
 | `get_plan` | Return plan state as formatted text (no panel) |
 | `add_task` | Append a single task to a plan |
 | `add_tasks` | Append multiple tasks in one call |
@@ -221,7 +222,7 @@ Wingman exposes 11 tools to Claude. You don't call these directly — just descr
 | `list_plans` | List all plans with task counts |
 | `delete_plan` | Delete a plan and all its tasks |
 
-There are also 13 internal `_ui_*` tools used by the panel itself — hidden from Claude, not part of the public API.
+There are also 14 internal `_ui_*` tools used by the panel itself — hidden from Claude, not part of the public API.
 
 <br/>
 
@@ -237,8 +238,8 @@ There are also 13 internal `_ui_*` tools used by the panel itself — hidden fro
 │  │  Claude LLM  │────▶│  Wingman MCP Server       │  │
 │  └──────────────┘     │  (stdio transport)        │  │
 │         ▲             │                            │  │
-│         │             │  11 LLM-visible tools      │  │
-│  sendMessage()        │  13 UI-only tools          │  │
+│         │             │  12 LLM-visible tools      │  │
+│  sendMessage()        │  14 UI-only tools          │  │
 │         │             │  ui:// resource (panel)    │  │
 │  ┌──────────────┐     │  SQLite store              │  │
 │  │  Wingman     │◀────│                            │  │
@@ -264,7 +265,7 @@ There are also 13 internal `_ui_*` tools used by the panel itself — hidden fro
 - **Local-only by default.** stdio transport. Your plans live on your machine.
 - **Sandboxed UI.** The panel runs in a host-sandboxed iframe with a strict CSP (`connect-src 'self'`). No cross-origin access.
 - **Parameterized SQL throughout.** No string-built queries. Validated via full test suite.
-- **Path-traversal safe.** Plan names are allow-list validated — only alphanumerics, space, hyphen, underscore. Slashes, dots, and null bytes are blocked.
+- **Path-traversal safe.** Plan names are allow-list validated — letters, digits, space, hyphen, underscore, apostrophe, period, colon, parentheses. Slashes, backslashes, `..` sequences, null bytes, newlines, and tabs are blocked.
 
 <br/>
 
@@ -287,14 +288,9 @@ There are also 13 internal `_ui_*` tools used by the panel itself — hidden fro
 
 ---
 
-## Known limitations in v0.1
+## Known limitations in v0.2
 
-These are intentionally deferred to v0.2 — not bugs, tracked work:
-
-- **Clear all tasks, Export as markdown, Delete plan** (panel buttons) are disabled. The equivalent LLM tools (`delete_plan` via Claude) work fine.
-- **Plan names** are restricted to alphanumerics, space, hyphen, underscore. Apostrophes, colons, and parens are coming in v0.2.
-- **Task IDs** are globally auto-incrementing, not per-plan. "Task 23 in a 4-task plan" looks odd. Per-plan numbering is v0.2.
-- **Live polling** runs every 2.5s. Server-pushed updates via MCP notifications are v0.2.
+- **Live polling** runs every 2.5s (10s after 30s idle). Server-pushed updates via MCP notifications are v0.3.
 - **Mobile Claude** (claude.ai mobile) requires a hosted HTTP/SSE server. Local stdio can't reach mobile clients. Wingman Cloud addresses this.
 
 <br/>
@@ -303,8 +299,11 @@ These are intentionally deferred to v0.2 — not bugs, tracked work:
 
 ## Roadmap
 
-### v0.2 — local polish
-Server-pushed updates (replace polling) · plan-picker panel · per-plan task IDs · wider plan-name regex · smarter polling backoff · re-enable deferred menu actions · "Build from conversation" in 3-dot menu
+### v0.2 — shipped
+Plan-picker panel (`show_plans`) · per-plan task position (1..N display) · wider plan-name regex · smarter polling backoff · re-enabled clear-all / export / delete-plan menu actions · "Build from conversation" in 3-dot menu.
+
+### v0.3 — next
+Server-pushed updates (replace polling via MCP notifications) · sub-tasks · priorities · due dates.
 
 ### Wingman Cloud — hosted SaaS
 HTTP/SSE transport · OAuth 2.1 · Postgres with user scoping · Fly.io / Railway hosting · mobile Claude support · cross-device plan access
@@ -333,7 +332,7 @@ Expected. Wingman is an MCP server, not a CLI tool. It speaks JSON-RPC over stdi
 
 ## Contributing
 
-Issues, PRs, and feedback welcome. This is a v0.1 — rough edges exist and are documented above.
+Issues, PRs, and feedback welcome. This is v0.2 — rough edges exist and are documented above.
 
 If you hit a host-specific rendering quirk (especially on Cursor or VS Code Copilot Chat), open an issue with your host version and what you observed. Host-side MCP Apps behavior varies and real-world reports are the fastest way to track it.
 

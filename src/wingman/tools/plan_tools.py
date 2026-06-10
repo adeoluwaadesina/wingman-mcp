@@ -37,6 +37,7 @@ def plan_to_dict(plan: Plan) -> dict[str, Any]:
 def task_to_dict(t: Task) -> dict[str, Any]:
     return {
         "id": t.id,
+        "position": t.position,
         "content": t.content,
         "status": t.status,
         "sort_order": t.sort_order,
@@ -57,7 +58,7 @@ def format_plan_text(plan: Plan) -> str:
     else:
         for t in plan.tasks:
             icon = STATUS_ICONS.get(t.status, "[ ]")
-            lines.append(f"{icon} {t.id}. {t.content}")
+            lines.append(f"{icon} {t.position}. {t.content}")
     return "\n".join(lines)
 
 

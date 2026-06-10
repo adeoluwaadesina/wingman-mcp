@@ -14,9 +14,11 @@ from .storage import db
 from .storage.models import Task
 
 
-RUN_TASK_PROMPT = """Help me work on this task from my **{plan_name}** plan: {task_content}
+RUN_TASK_PROMPT = """I'd like to work on this task from my **{plan_name}** plan:
 
-When complete, call tick_task with plan_name="{plan_name}" and task_id={task_id}.
+> {task_content}
+
+Please help me complete it.
 """
 
 
@@ -32,7 +34,6 @@ def render_run_task_prompt(plan_name: str, task_id: int) -> str:
     return RUN_TASK_PROMPT.format(
         plan_name=plan.name,
         task_content=task.content,
-        task_id=task.id,
     )
 
 

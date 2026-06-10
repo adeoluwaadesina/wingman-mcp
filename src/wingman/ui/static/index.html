@@ -12,6 +12,12 @@
   <div id="stage" class="stage" data-plan="">
     <header class="header">
       <div class="title-block">
+        <button class="back-link" data-role="back-link" hidden aria-label="Back to all plans">
+          <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+            <path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>
+          </svg>
+          All plans
+        </button>
         <h1 class="title" data-role="title" contenteditable="false" spellcheck="false"></h1>
         <p class="subtitle" data-role="subtitle">0 tasks &middot; 0 done</p>
       </div>
@@ -30,12 +36,15 @@
           </svg>
         </button>
         <div class="menu" data-role="menu" hidden>
+          <button data-action="all-plans"><span class="mi">&#8592;</span> All plans</button>
+          <div class="menu-divider"></div>
           <button data-action="rename"><span class="mi">&#9998;</span> Rename plan</button>
           <button data-action="clear-completed"><span class="mi">&#9003;</span> Clear completed</button>
-          <button data-action="clear-all" class="menu-disabled" disabled aria-disabled="true" title="Coming in v0.2"><span class="mi">&#128465;</span> Clear all tasks</button>
-          <button data-action="export" class="menu-disabled" disabled aria-disabled="true" title="Coming in v0.2"><span class="mi">&#128229;</span> Export as markdown</button>
+          <button data-action="build-from-chat"><span class="mi">&#128172;</span> Build from conversation</button>
+          <button data-action="clear-all"><span class="mi">&#128465;</span> Clear all tasks</button>
+          <button data-action="export"><span class="mi">&#128229;</span> Export as markdown</button>
           <div class="menu-divider"></div>
-          <button data-action="delete-plan" class="danger menu-disabled" disabled aria-disabled="true" title="Coming in v0.2"><span class="mi">&#128465;</span> Delete plan</button>
+          <button data-action="delete-plan" class="danger"><span class="mi">&#128465;</span> Delete plan</button>
         </div>
       </div>
     </header>
@@ -57,6 +66,10 @@
     </section>
 
     <ul class="task-list" data-role="task-list"></ul>
+
+    <section class="picker-section" data-role="picker" hidden>
+      <ul class="picker-list" data-role="picker-list"></ul>
+    </section>
 
     <section class="empty-state" data-role="empty" hidden>
       <div class="empty-icon">

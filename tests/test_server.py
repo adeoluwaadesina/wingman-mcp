@@ -7,12 +7,13 @@ never prefetch it and the panel never renders.
 from wingman.server import build_server, MODEL_AND_APP, APP_ONLY, SHOW_PLAN_META, _panel_result_meta
 from wingman.ui.resource import PANEL_URI, MCP_UI_MIME_TYPE
 
-# Handover §5.2 — these 11 tools MUST be visible to the model.
+# Handover §5.2 — these 12 tools MUST be visible to the model (v0.2: +show_plans).
 LLM_VISIBLE_TOOLS = {
     "create_plan",
     "add_task",
     "add_tasks",
     "show_plan",
+    "show_plans",
     "get_plan",
     "tick_task",
     "update_task_status",
@@ -55,11 +56,11 @@ async def test_panel_resource_renders_static_html():
 import re
 
 
-async def test_deferred_menu_items_render_disabled():
-    """v0.1 guard: three menu actions (clear-all, export, delete-plan) are
-    deferred to v0.2 because the sandboxed iframe blocks confirm() and Blob
-    downloads. They must render disabled (greyed, non-interactive, tooltip) and
-    must NOT be silently re-enabled. The two working items must stay active."""
+async def test_deferred_menu_items_render_enabled():
+    """v0.2: the three previously-deferred menu items (clear-all, export,
+    delete-plan) plus the new build-from-chat are now fully enabled. They must
+    NOT carry the disabled attribute, the v0.1 menu-disabled class, or the
+    'Coming in v0.2' tooltip."""
     mcp = build_server()
     blocks = list(await mcp.read_resource(PANEL_URI))
     html = blocks[0].content
@@ -69,21 +70,14 @@ async def test_deferred_menu_items_render_disabled():
         assert m, f"no menu button for {action!r}"
         return m.group(0)
 
-    for action in ("clear-all", "export", "delete-plan"):
+    for action in ("rename", "clear-completed", "build-from-chat", "clear-all", "export", "delete-plan"):
         tag = button_tag(action)
-        assert "disabled" in tag, f"{action} must carry the disabled attribute: {tag}"
-        assert "menu-disabled" in tag, f"{action} must carry the menu-disabled class: {tag}"
-        assert "Coming in v0.2" in tag, f"{action} must carry the v0.2 tooltip: {tag}"
+        assert "disabled" not in tag, f"{action} must NOT be disabled in v0.2: {tag}"
+        assert "menu-disabled" not in tag, f"{action} must NOT carry menu-disabled class: {tag}"
+        assert "Coming in v0.2" not in tag, f"{action} must NOT carry the v0.2 tooltip: {tag}"
 
-    # The working items must remain interactive.
-    for action in ("rename", "clear-completed"):
-        tag = button_tag(action)
-        assert "disabled" not in tag, f"{action} must NOT be disabled: {tag}"
-        assert "menu-disabled" not in tag, f"{action} must NOT be greyed out: {tag}"
-
-    # The disabling CSS must be present and non-interactive.
-    assert ".menu button.menu-disabled" in html
-    assert "pointer-events: none" in html
+    # The retired CSS rule must be gone.
+    assert ".menu button.menu-disabled" not in html
 
 
 def _visibility(meta):
@@ -120,7 +114,7 @@ async def test_tools_list_visibility_matches_handover_5_2():
     assert all(n.startswith("_ui_") for n in app_only), (
         f"non-_ui_ tool registered as app-only: {[n for n in app_only if not n.startswith('_ui_')]}"
     )
-    assert len(app_only) == 13, f"expected 13 _ui_* app-only tools, got {len(app_only)}: {sorted(app_only)}"
+    assert len(app_only) == 14, f"expected 14 _ui_* app-only tools, got {len(app_only)}: {sorted(app_only)}"
 
 
 async def test_show_plan_has_panel_binding_AND_is_model_visible():
@@ -186,3 +180,39 @@ def test_panel_html_carries_build_marker():
     from wingman.ui.resource import render_panel, BUILD_TIMESTAMP
     html = render_panel()
     assert f"build {BUILD_TIMESTAMP}" in html, "build marker missing from served HTML"
+
+
+async def test_show_plans_is_model_visible_and_panel_bound():
+    """v0.2: show_plans is a new model-visible panel tool. It must bind to the
+    same ui://wingman/panel resource as show_plan so a Claude-side `show_plans`
+    call mounts the picker."""
+    mcp = build_server()
+    by_name = {t.name: t for t in await mcp.list_tools()}
+    assert "show_plans" in by_name, "show_plans tool not registered"
+    sp = by_name["show_plans"]
+    assert _is_model_visible(sp.meta)
+    assert sp.meta["ui"]["resourceUri"] == PANEL_URI
+    assert sp.meta["ui/resourceUri"] == PANEL_URI
+
+
+async def test_ui_list_plans_is_app_only():
+    """v0.2: _ui_list_plans is the picker-mode poll endpoint and must be
+    hidden from the model (visibility = ["app"])."""
+    mcp = build_server()
+    by_name = {t.name: t for t in await mcp.list_tools()}
+    assert "_ui_list_plans" in by_name, "_ui_list_plans not registered"
+    assert _visibility(by_name["_ui_list_plans"].meta) == ["app"]
+
+
+async def test_show_plans_call_emits_top_level_meta_with_plans_payload():
+    from mcp.types import CallToolResult
+    from wingman.tools import plan_tools
+    mcp = build_server()
+    plan_tools.create_plan("alpha", ["one"])
+    plan_tools.create_plan("beta", [])
+    result = await mcp.call_tool("show_plans", {})
+    assert isinstance(result, CallToolResult), type(result).__name__
+    assert result.meta is not None and result.meta["ui"]["resourceUri"] == PANEL_URI
+    assert isinstance(result.structuredContent.get("plans"), list)
+    names = {p["name"] for p in result.structuredContent["plans"]}
+    assert {"alpha", "beta"}.issubset(names)
