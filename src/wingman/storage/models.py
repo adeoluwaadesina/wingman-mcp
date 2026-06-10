@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field, field_validator
 
 TaskStatus = Literal["pending", "in_progress", "done", "blocked"]
 
-PLAN_NAME_RE = re.compile(r"^[A-Za-z0-9 _\-]{1,64}$")
+PLAN_NAME_RE = re.compile(r"^[A-Za-z0-9 _\-'.:()]{1,64}$")
 
 
 def validate_plan_name(value: str) -> str:
@@ -18,7 +18,8 @@ def validate_plan_name(value: str) -> str:
     name = value.strip()
     if not PLAN_NAME_RE.match(name):
         raise ValueError(
-            "plan name must be 1-64 chars; letters, digits, space, hyphen, underscore only"
+            "plan name must be 1-64 chars; letters, digits, space, hyphen, "
+            "underscore, apostrophe, period, colon, parentheses only"
         )
     return name
 
@@ -29,6 +30,7 @@ class Task(BaseModel):
     content: str
     status: TaskStatus = "pending"
     sort_order: int
+    position: int = 0  # 1-based rank within plan; set by db.get_plan
     created_at: datetime
     updated_at: datetime
     completed_at: datetime | None = None

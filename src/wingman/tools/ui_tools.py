@@ -19,6 +19,10 @@ def get_plan(plan_name: str) -> dict[str, Any]:
     return plan_tools.show_plan(plan_name)
 
 
+def list_plans() -> dict[str, Any]:
+    return plan_tools.list_plans()
+
+
 def tick_task(plan_name: str, task_id: int) -> dict[str, Any]:
     return task_tools.tick_task(plan_name, task_id)
 

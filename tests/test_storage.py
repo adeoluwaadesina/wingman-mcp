@@ -129,6 +129,27 @@ def test_clear_completed_and_all():
 def test_validate_plan_name():
     assert validate_plan_name("Launch Footprint") == "Launch Footprint"
     assert validate_plan_name("  spaced  ") == "spaced"
-    for bad in ["", "x" * 65, "with/slash", "../traversal", "tab\ttab"]:
+    # v0.2 widened: apostrophe, period, colon, parentheses
+    assert validate_plan_name("Adeolu's plan") == "Adeolu's plan"
+    assert validate_plan_name("Q1 2026 launch") == "Q1 2026 launch"
+    assert validate_plan_name("Wingman: v0.2") == "Wingman: v0.2"
+    assert validate_plan_name("Footprint (MVP)") == "Footprint (MVP)"
+    for bad in ["", "x" * 65, "with/slash", "../traversal", "tab\ttab", "back\\slash", "new\nline"]:
         with pytest.raises(ValueError):
             validate_plan_name(bad)
+
+
+def test_get_plan_sets_position_1_based():
+    db.create_plan("p", ["a", "b", "c", "d"])
+    plan = db.get_plan("p")
+    assert [t.position for t in plan.tasks] == [1, 2, 3, 4]
+
+
+def test_position_recomputes_after_reorder():
+    db.create_plan("p", ["a", "b", "c"])
+    ids = [t.id for t in db.get_plan("p").tasks]
+    # Move the last task (largest id) to the front.
+    plan = db.reorder_tasks("p", [ids[2], ids[0], ids[1]])
+    assert plan.tasks[0].id == ids[2]
+    assert plan.tasks[0].position == 1
+    assert [t.position for t in plan.tasks] == [1, 2, 3]
