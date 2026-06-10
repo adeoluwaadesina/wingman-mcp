@@ -299,17 +299,11 @@ There are also 14 internal `_ui_*` tools used by the panel itself — hidden fro
 
 ## Roadmap
 
-### v0.2 — shipped
-Plan-picker panel (`show_plans`) · per-plan task position (1..N display) · wider plan-name regex · smarter polling backoff · re-enabled clear-all / export / delete-plan menu actions · "Build from conversation" in 3-dot menu.
-
-### v0.3 — next
-Server-pushed updates (replace polling via MCP notifications) · sub-tasks · priorities · due dates.
-
-### Wingman Cloud — hosted SaaS
+### Wingman Cloud — next
 HTTP/SSE transport · OAuth 2.1 · Postgres with user scoping · Fly.io / Railway hosting · mobile Claude support · cross-device plan access
 
-### v1.0 — after Cloud
-React UI rewrite · multi-plan tabs · search across plans · plan sharing · optional cloud sync for local users
+### v0.2 — shipped ✓
+Plan picker (`show_plans`) · full menu actions (clear all, export, delete) · per-plan task numbering · wider plan-name support (`'.:()`) · smarter polling backoff · "Build from conversation" in 3-dot menu
 
 <br/>
 
