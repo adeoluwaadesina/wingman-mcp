@@ -4,7 +4,7 @@
 
 **An open-source MCP server that gives Claude a persistent, interactive plan panel — rendered inline in the chat.**
 
-*Sits beside you. Doesn't fly the plane.*
+_Sits beside you. Doesn't fly the plane._
 
 [![PyPI](https://img.shields.io/pypi/v/wingman-mcp?color=0a84ff&label=wingman-mcp)](https://pypi.org/project/wingman-mcp/)
 [![Python](https://img.shields.io/badge/python-3.10+-0a84ff)](https://www.python.org/)
@@ -51,15 +51,31 @@ Add Wingman to your MCP host config and restart. One block, one restart.
 
 ### Claude Desktop
 
-**macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`
-**Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
-**Linux:** `~/.config/Claude/claude_desktop_config.json`
+First, install with pipx for the simplest setup:
+
+```bash
+pipx install wingman-mcp
+```
+
+Then add to your config (`~/Library/Application Support/Claude/claude_desktop_config.json` on macOS):
 
 ```json
 {
   "mcpServers": {
     "wingman": {
-      "command": "python",
+      "command": "wingman"
+    }
+  }
+}
+```
+
+If you installed with `pip` instead, use the full Python path. Find it by running `which python3` in Terminal, then:
+
+```json
+{
+  "mcpServers": {
+    "wingman": {
+      "command": "/path/from/which/python3",
       "args": ["-m", "wingman"]
     }
   }
@@ -207,20 +223,20 @@ Rename plan, Clear completed, Build from conversation, Clear all tasks, Export a
 
 Wingman exposes 12 tools to Claude. You don't call these directly — just describe what you want and Claude picks the right one.
 
-| Tool | What it does |
-|---|---|
-| `create_plan` | Create a new named plan with optional initial tasks |
-| `show_plan` | Render the interactive panel inline in chat |
-| `show_plans` | Render a clickable plan picker inline in chat |
-| `get_plan` | Return plan state as formatted text (no panel) |
-| `add_task` | Append a single task to a plan |
-| `add_tasks` | Append multiple tasks in one call |
-| `tick_task` | Mark a task done (Claude calls this after completing work) |
+| Tool                 | What it does                                               |
+| -------------------- | ---------------------------------------------------------- |
+| `create_plan`        | Create a new named plan with optional initial tasks        |
+| `show_plan`          | Render the interactive panel inline in chat                |
+| `show_plans`         | Render a clickable plan picker inline in chat              |
+| `get_plan`           | Return plan state as formatted text (no panel)             |
+| `add_task`           | Append a single task to a plan                             |
+| `add_tasks`          | Append multiple tasks in one call                          |
+| `tick_task`          | Mark a task done (Claude calls this after completing work) |
 | `update_task_status` | Set status: `pending` / `in_progress` / `done` / `blocked` |
-| `rename_plan` | Rename a plan |
-| `reorder_tasks` | Reorder tasks by ID list |
-| `list_plans` | List all plans with task counts |
-| `delete_plan` | Delete a plan and all its tasks |
+| `rename_plan`        | Rename a plan                                              |
+| `reorder_tasks`      | Reorder tasks by ID list                                   |
+| `list_plans`         | List all plans with task counts                            |
+| `delete_plan`        | Delete a plan and all its tasks                            |
 
 There are also 14 internal `_ui_*` tools used by the panel itself — hidden from Claude, not part of the public API.
 
@@ -273,16 +289,16 @@ There are also 14 internal `_ui_*` tools used by the panel itself — hidden fro
 
 ## vs. alternatives
 
-| | Wingman | text-only MCP todos | Cursor plan agent |
-|---|---|---|---|
-| Interactive UI panel | ✅ inline iframe | ❌ | ✅ code-only |
-| Works in Claude Desktop | ✅ | ✅ | ❌ |
-| One-click Run task | ✅ | ❌ | ✅ |
-| Build from conversation | ✅ | ❌ | ❌ |
-| Drag-to-reorder | ✅ | ❌ | ❌ |
-| Persists across restarts | ✅ SQLite | varies | ❌ |
-| Any goal / domain | ✅ | ✅ | ❌ code only |
-| No telemetry | ✅ | varies | ❌ |
+|                          | Wingman          | text-only MCP todos | Cursor plan agent |
+| ------------------------ | ---------------- | ------------------- | ----------------- |
+| Interactive UI panel     | ✅ inline iframe | ❌                  | ✅ code-only      |
+| Works in Claude Desktop  | ✅               | ✅                  | ❌                |
+| One-click Run task       | ✅               | ❌                  | ✅                |
+| Build from conversation  | ✅               | ❌                  | ❌                |
+| Drag-to-reorder          | ✅               | ❌                  | ❌                |
+| Persists across restarts | ✅ SQLite        | varies              | ❌                |
+| Any goal / domain        | ✅               | ✅                  | ❌ code only      |
+| No telemetry             | ✅               | varies              | ❌                |
 
 <br/>
 
@@ -300,9 +316,11 @@ There are also 14 internal `_ui_*` tools used by the panel itself — hidden fro
 ## Roadmap
 
 ### Wingman Cloud — next
+
 HTTP/SSE transport · OAuth 2.1 · Postgres with user scoping · Fly.io / Railway hosting · mobile Claude support · cross-device plan access
 
 ### v0.2 — shipped ✓
+
 Plan picker (`show_plans`) · full menu actions (clear all, export, delete) · per-plan task numbering · wider plan-name support (`'.:()`) · smarter polling backoff · "Build from conversation" in 3-dot menu
 
 <br/>
