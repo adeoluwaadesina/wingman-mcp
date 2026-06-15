@@ -69,6 +69,8 @@ Then add to your config (`~/Library/Application Support/Claude/claude_desktop_co
 }
 ```
 
+> **Note for pip users:** If you installed with `pip` instead of `pipx`, use the full Python path: `"command": "/Library/Frameworks/Python.framework/Versions/3.12/bin/python3"` with `"args": ["-m", "wingman"]`.
+
 If you installed with `pip` instead, use the full Python path. Find it by running `which python3` in Terminal, then:
 
 ```json
