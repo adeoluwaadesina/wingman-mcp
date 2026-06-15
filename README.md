@@ -244,6 +244,20 @@ There are also 14 internal `_ui_*` tools used by the panel itself — hidden fro
 
 ---
 
+## Use as an agent skill
+
+Wingman is available as a composable skill for AI agents via [skills.sh](https://skills.sh):
+
+```bash
+npx skills add adeoluwaadesina/wingman-mcp
+```
+
+Once installed, any MCP-compatible agent can call Wingman's plan management tools as coordination primitives across a multi-step workflow — create plans, track task state, and tick tasks on completion, all from within an orchestrated agent pipeline.
+
+<br/>
+
+---
+
 ## Architecture
 
 ```
