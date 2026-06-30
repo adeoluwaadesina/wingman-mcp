@@ -224,3 +224,207 @@ async def delete_plan(user_id: str, name: str) -> None:
     # asyncpg returns e.g. "DELETE 1"
     if result.split()[-1] == "0":
         raise PlanNotFound(f"plan '{name}' not found")
+
+
+VALID_STATUSES = {"pending", "in_progress", "done", "blocked"}
+
+
+async def _get_task_dict(conn, user_id: str, task_id: int) -> dict:
+    r = await conn.fetchrow(
+        "SELECT id, plan_name, content, status, sort_order, created_at, updated_at, completed_at "
+        "FROM tasks WHERE id = $1 AND user_id = $2",
+        task_id, user_id,
+    )
+    if r is None:
+        raise TaskNotFound(f"task {task_id} not found")
+    return plan_tools.task_to_dict(_row_to_task(r, r["sort_order"] + 1))
+
+
+async def _assert_plan(conn, user_id: str, plan_name: str) -> None:
+    if not await conn.fetchval(
+        "SELECT 1 FROM plans WHERE user_id = $1 AND name = $2", user_id, plan_name
+    ):
+        raise PlanNotFound(f"plan '{plan_name}' not found")
+
+
+async def _count_tasks(conn, user_id: str, plan_name: str) -> int:
+    return int(await conn.fetchval(
+        "SELECT count(*) FROM tasks WHERE user_id = $1 AND plan_name = $2", user_id, plan_name
+    ))
+
+
+async def add_task(user_id: str, plan_name: str, content: str, *, max_tasks: int) -> dict:
+    plan_name = validate_plan_name(plan_name)
+    content = (content or "").strip()
+    if not content or len(content) > 2000:
+        raise ValueError("task content must be 1-2000 chars")
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        async with conn.transaction():
+            await _assert_plan(conn, user_id, plan_name)
+            if await _count_tasks(conn, user_id, plan_name) >= max_tasks:
+                raise QuotaExceeded(f"a plan may have at most {max_tasks} tasks")
+            order = int(await conn.fetchval(
+                "SELECT coalesce(max(sort_order), -1) + 1 FROM tasks WHERE user_id = $1 AND plan_name = $2",
+                user_id, plan_name,
+            ))
+            tid = await conn.fetchval(
+                "INSERT INTO tasks (user_id, plan_name, content, status, sort_order) "
+                "VALUES ($1, $2, $3, 'pending', $4) RETURNING id",
+                user_id, plan_name, content, order,
+            )
+            await conn.execute(
+                "UPDATE plans SET updated_at = now() WHERE user_id = $1 AND name = $2",
+                user_id, plan_name,
+            )
+            return await _get_task_dict(conn, user_id, tid)
+
+
+async def add_tasks(user_id: str, plan_name: str, contents, *, max_tasks: int, max_batch: int) -> list[dict]:
+    plan_name = validate_plan_name(plan_name)
+    cleaned = []
+    for c in contents:
+        c = (c or "").strip()
+        if not c:
+            continue
+        if len(c) > 2000:
+            raise ValueError("task content must be 1-2000 chars")
+        cleaned.append(c)
+    if len(cleaned) > max_batch:
+        raise QuotaExceeded(f"at most {max_batch} tasks per call")
+    if not cleaned:
+        return []
+    pool = get_pool()
+    out_ids = []
+    async with pool.acquire() as conn:
+        async with conn.transaction():
+            await _assert_plan(conn, user_id, plan_name)
+            if await _count_tasks(conn, user_id, plan_name) + len(cleaned) > max_tasks:
+                raise QuotaExceeded(f"a plan may have at most {max_tasks} tasks")
+            order = int(await conn.fetchval(
+                "SELECT coalesce(max(sort_order), -1) + 1 FROM tasks WHERE user_id = $1 AND plan_name = $2",
+                user_id, plan_name,
+            ))
+            for content in cleaned:
+                tid = await conn.fetchval(
+                    "INSERT INTO tasks (user_id, plan_name, content, status, sort_order) "
+                    "VALUES ($1, $2, $3, 'pending', $4) RETURNING id",
+                    user_id, plan_name, content, order,
+                )
+                out_ids.append(tid)
+                order += 1
+            await conn.execute(
+                "UPDATE plans SET updated_at = now() WHERE user_id = $1 AND name = $2",
+                user_id, plan_name,
+            )
+            return [await _get_task_dict(conn, user_id, i) for i in out_ids]
+
+
+async def update_task_status(user_id: str, plan_name: str, task_id: int, status: str) -> dict:
+    plan_name = validate_plan_name(plan_name)
+    if status not in VALID_STATUSES:
+        raise ValueError(f"invalid status: {status}")
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        async with conn.transaction():
+            owned = await conn.fetchval(
+                "SELECT 1 FROM tasks WHERE id = $1 AND user_id = $2 AND plan_name = $3",
+                task_id, user_id, plan_name,
+            )
+            if not owned:
+                raise TaskNotFound(f"task {task_id} not found in plan '{plan_name}'")
+            if status == "done":
+                await conn.execute(
+                    "UPDATE tasks SET status = $1, completed_at = now(), updated_at = now() "
+                    "WHERE id = $2 AND user_id = $3",
+                    status, task_id, user_id,
+                )
+            else:
+                await conn.execute(
+                    "UPDATE tasks SET status = $1, completed_at = NULL, updated_at = now() "
+                    "WHERE id = $2 AND user_id = $3",
+                    status, task_id, user_id,
+                )
+            await conn.execute(
+                "UPDATE plans SET updated_at = now() WHERE user_id = $1 AND name = $2",
+                user_id, plan_name,
+            )
+            return await _get_task_dict(conn, user_id, task_id)
+
+
+async def tick_task(user_id: str, plan_name: str, task_id: int) -> dict:
+    return await update_task_status(user_id, plan_name, task_id, "done")
+
+
+async def delete_task(user_id: str, plan_name: str, task_id: int) -> None:
+    plan_name = validate_plan_name(plan_name)
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        async with conn.transaction():
+            result = await conn.execute(
+                "DELETE FROM tasks WHERE id = $1 AND user_id = $2 AND plan_name = $3",
+                task_id, user_id, plan_name,
+            )
+            if result.split()[-1] == "0":
+                raise TaskNotFound(f"task {task_id} not found in plan '{plan_name}'")
+            await conn.execute(
+                "UPDATE plans SET updated_at = now() WHERE user_id = $1 AND name = $2",
+                user_id, plan_name,
+            )
+
+
+async def reorder_tasks(user_id: str, plan_name: str, ordered_ids) -> dict:
+    plan_name = validate_plan_name(plan_name)
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        async with conn.transaction():
+            await _assert_plan(conn, user_id, plan_name)
+            rows = await conn.fetch(
+                "SELECT id FROM tasks WHERE user_id = $1 AND plan_name = $2", user_id, plan_name
+            )
+            existing = {int(r["id"]) for r in rows}
+            provided = [int(i) for i in ordered_ids]
+            if set(provided) != existing:
+                raise ValueError("reorder_tasks requires every task id of the plan, exactly once")
+            for idx, tid in enumerate(provided):
+                await conn.execute(
+                    "UPDATE tasks SET sort_order = $1, updated_at = now() WHERE id = $2 AND user_id = $3",
+                    idx, tid, user_id,
+                )
+            await conn.execute(
+                "UPDATE plans SET updated_at = now() WHERE user_id = $1 AND name = $2",
+                user_id, plan_name,
+            )
+            plan = await _load_plan(conn, user_id, plan_name)
+    return plan_tools.plan_to_dict(plan)
+
+
+async def clear_completed(user_id: str, plan_name: str) -> int:
+    plan_name = validate_plan_name(plan_name)
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        async with conn.transaction():
+            result = await conn.execute(
+                "DELETE FROM tasks WHERE user_id = $1 AND plan_name = $2 AND status = 'done'",
+                user_id, plan_name,
+            )
+            await conn.execute(
+                "UPDATE plans SET updated_at = now() WHERE user_id = $1 AND name = $2",
+                user_id, plan_name,
+            )
+    return int(result.split()[-1])
+
+
+async def clear_all(user_id: str, plan_name: str) -> int:
+    plan_name = validate_plan_name(plan_name)
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        async with conn.transaction():
+            result = await conn.execute(
+                "DELETE FROM tasks WHERE user_id = $1 AND plan_name = $2", user_id, plan_name
+            )
+            await conn.execute(
+                "UPDATE plans SET updated_at = now() WHERE user_id = $1 AND name = $2",
+                user_id, plan_name,
+            )
+    return int(result.split()[-1])
