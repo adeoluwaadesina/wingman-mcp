@@ -44,3 +44,37 @@ def test_good_token_sets_identity(monkeypatch):
     r = client.get("/whoami", headers={"Authorization": "Bearer good"})
     assert r.status_code == 200
     assert r.json()["uid"] == "user_M"
+
+
+def test_handler_exception_resets_identity(monkeypatch):
+    async def _boom(request):
+        raise RuntimeError("downstream explosion")
+    async def _noop_upsert(*a, **k):
+        return None
+    monkeypatch.setattr(server_http.store_pg, "upsert_user", _noop_upsert)
+    app = Starlette(routes=[Route("/boom", _boom)])
+    app.add_middleware(server_http.AuthMiddleware, verifier=_AllowVerifier(),
+                       public_paths={"/healthz"})
+    client = TestClient(app, raise_server_exceptions=False)
+    client.get("/boom", headers={"Authorization": "Bearer good"})
+    # identity must not leak across requests even when the handler raised
+    with pytest.raises(identity.Unauthenticated):
+        identity.current_user_id()
+
+
+def test_verifier_crash_returns_503(monkeypatch):
+    class _CrashVerifier:
+        def verify(self, token):
+            raise RuntimeError("jwks unreachable")
+    async def _noop_upsert(*a, **k):
+        return None
+    monkeypatch.setattr(server_http.store_pg, "upsert_user", _noop_upsert)
+    async def _ok(request):
+        from starlette.responses import PlainTextResponse
+        return PlainTextResponse("ok")
+    app = Starlette(routes=[Route("/x", _ok)])
+    app.add_middleware(server_http.AuthMiddleware, verifier=_CrashVerifier(),
+                       public_paths={"/healthz"})
+    client = TestClient(app, raise_server_exceptions=False)
+    r = client.get("/x", headers={"Authorization": "Bearer whatever"})
+    assert r.status_code == 503

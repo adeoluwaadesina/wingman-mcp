@@ -266,6 +266,9 @@ class AuthMiddleware(BaseHTTPMiddleware):
             client = request.client.host if request.client else "?"
             log.warning("auth failure from ip=%s path=%s", client, request.url.path)
             return JSONResponse({"error": "invalid_token"}, status_code=401)
+        except Exception:
+            log.exception("verifier error path=%s", request.url.path)
+            return JSONResponse({"error": "server_error"}, status_code=503)
         uid = claims["sub"]
         tok = identity.set_current_user(uid, claims.get("email"), claims.get("name"))
         try:
