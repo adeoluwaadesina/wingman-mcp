@@ -52,3 +52,30 @@ def test_resource_metadata_shape():
     doc = auth.resource_metadata(AUD, [ISSUER])
     assert doc["resource"] == AUD
     assert doc["authorization_servers"] == [ISSUER]
+
+def test_hs256_token_rejected(keypair):
+    """Algorithm confusion guard: an HS256-signed token must be rejected."""
+    tok = jwt.encode(
+        {"sub": "u", "iss": ISSUER, "aud": AUD, "exp": int(time.time()) + 300},
+        "arbitrary-secret",
+        algorithm="HS256",
+    )
+    v = _StubVerifier(keypair.public_key())
+    with pytest.raises(auth.InvalidToken):
+        v.verify(tok)
+
+def test_wrong_issuer_rejected(keypair):
+    v = _StubVerifier(keypair.public_key())
+    with pytest.raises(auth.InvalidToken):
+        v.verify(_make_token(keypair, iss="https://evil-issuer.example.com"))
+
+def test_missing_sub_rejected(keypair):
+    """Token with no sub claim must be rejected."""
+    tok = jwt.encode(
+        {"iss": ISSUER, "aud": AUD, "exp": int(time.time()) + 300},
+        keypair,
+        algorithm="RS256",
+    )
+    v = _StubVerifier(keypair.public_key())
+    with pytest.raises(auth.InvalidToken):
+        v.verify(tok)
