@@ -243,6 +243,7 @@ from starlette.responses import JSONResponse
 from starlette.routing import Route
 
 from . import auth as auth_mod
+from . import hardening
 
 log = logging.getLogger("wingman.cloud")
 
@@ -300,10 +301,22 @@ def build_app(cfg: CloudConfig, verifier) -> Starlette:
     ]
     app = Starlette(routes=routes)
     app.mount("/", mcp_app)
+
+    # Middleware ordering (Starlette: last added = outermost = first inbound).
+    # Final inbound chain:
+    #   CORS -> body-limit -> auth (sets identity) -> rate-limit (reads identity)
+    #     -> security-headers -> app
+    #
+    # Achieved by adding in this order (innermost first):
+    #   1. hardening.apply_inner  -> SecurityHeaders, RateLimit
+    #   2. AuthMiddleware         -> wraps RateLimit, sets identity via context var
+    #   3. hardening.apply_outer  -> BodyLimit, CORSMiddleware (outermost)
+    hardening.apply_inner(app, cfg)
     app.add_middleware(
         AuthMiddleware, verifier=verifier,
         public_paths={"/healthz", "/.well-known/oauth-protected-resource"},
     )
+    hardening.apply_outer(app, cfg)
     return app
 
 
