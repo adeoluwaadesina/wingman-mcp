@@ -27,10 +27,21 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=7.0", "pytest-asyncio>=0.21"]
+dev = ["pytest>=7.0", "pytest-asyncio>=0.23"]
+cloud = [
+    "asyncpg>=0.29",
+    "PyJWT[crypto]>=2.8",
+    "httpx>=0.27",
+    "uvicorn>=0.30",
+]
+observability = [
+    "sentry-sdk>=2.0",
+    "posthog>=3.5",
+]
 
 [project.scripts]
 wingman = "wingman.__main__:main"
+wingman-cloud = "wingman.cloud.__main__:main"
 
 [project.urls]
 Homepage = "https://github.com/adeoluwaadesina/wingman-mcp"
