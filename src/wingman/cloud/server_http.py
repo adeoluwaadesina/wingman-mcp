@@ -227,3 +227,84 @@ def build_mcp(cfg: CloudConfig) -> FastMCP:
 
     _register_panel_tools(mcp, cfg)
     return mcp
+
+
+# ---------------------------------------------------------------------------
+# Auth middleware
+# ---------------------------------------------------------------------------
+
+import logging
+import os
+
+from starlette.applications import Starlette
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
+from starlette.responses import JSONResponse
+from starlette.routing import Route
+
+from . import auth as auth_mod
+
+log = logging.getLogger("wingman.cloud")
+
+
+class AuthMiddleware(BaseHTTPMiddleware):
+    def __init__(self, app, verifier, public_paths):
+        super().__init__(app)
+        self._verifier = verifier
+        self._public = public_paths
+
+    async def dispatch(self, request: Request, call_next):
+        if request.url.path in self._public:
+            return await call_next(request)
+        header = request.headers.get("authorization", "")
+        if not header.lower().startswith("bearer "):
+            return JSONResponse({"error": "unauthenticated"}, status_code=401)
+        token = header.split(" ", 1)[1].strip()
+        try:
+            claims = self._verifier.verify(token)
+        except auth_mod.InvalidToken:
+            client = request.client.host if request.client else "?"
+            log.warning("auth failure from ip=%s path=%s", client, request.url.path)
+            return JSONResponse({"error": "invalid_token"}, status_code=401)
+        uid = claims["sub"]
+        tok = identity.set_current_user(uid, claims.get("email"), claims.get("name"))
+        try:
+            await store_pg.upsert_user(uid, claims.get("email"), claims.get("name"))
+            return await call_next(request)
+        finally:
+            identity.reset(tok)
+
+
+# ---------------------------------------------------------------------------
+# ASGI app builder
+# ---------------------------------------------------------------------------
+
+def build_app(cfg: CloudConfig, verifier) -> Starlette:
+    mcp = build_mcp(cfg)
+    mcp_app = mcp.streamable_http_app()  # ASGI sub-app
+
+    async def well_known(request):
+        return JSONResponse(auth_mod.resource_metadata(
+            cfg.base_url, authorization_servers=[_idp_issuer(cfg)]
+        ))
+
+    async def healthz(request):
+        return JSONResponse({"ok": True})
+
+    routes = [
+        Route("/.well-known/oauth-protected-resource", well_known),
+        Route("/healthz", healthz),
+    ]
+    app = Starlette(routes=routes)
+    app.mount("/", mcp_app)
+    app.add_middleware(
+        AuthMiddleware, verifier=verifier,
+        public_paths={"/healthz", "/.well-known/oauth-protected-resource"},
+    )
+    return app
+
+
+def _idp_issuer(cfg: CloudConfig) -> str:
+    # WorkOS issuer for the configured client. For AuthKit this is the AuthKit
+    # domain. Wired from env var WORKOS_ISSUER (add to .env.example in Task 11).
+    return os.environ.get("WORKOS_ISSUER", "https://api.workos.com")
