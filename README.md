@@ -97,7 +97,29 @@ Add Wingman to your MCP host config and restart. One block, one restart.
 }
 ```
 
-> **Note:** The interactive panel requires a host with MCP Apps support (SEP-1865). Claude Desktop and MCPJam render it fully. Cursor and VS Code Copilot Chat receive a clean text fallback — all tools still work.
+### Claude Code (CLI)
+
+Register Wingman once at user scope and it's available in every project:
+
+```bash
+claude mcp add wingman -s user -- python -m wingman
+```
+
+All tools work in the terminal. Instead of the clickable panel, Wingman renders a
+clean text view — a progress bar, your tasks grouped by phase, and checkboxes Claude
+ticks as it works:
+
+```text
+## Whistler - Full Build
+`███████████░░░░░░░░░░░`  32/58 done (55%)
+_26 pending_
+
+**PHASE 4**
+[ ] 26. Build Play, Pause, Stop playback controls
+[ ] 27. Build loop toggle
+```
+
+> **Note:** The interactive panel requires a host with MCP Apps support (SEP-1865). Claude Desktop and MCPJam render it fully. Claude Code (CLI), Cursor, and VS Code Copilot Chat receive the clean text view shown above — all tools still work.
 
 <br/>
 

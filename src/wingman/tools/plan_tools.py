@@ -45,20 +45,64 @@ def task_to_dict(t: Task) -> dict[str, Any]:
     }
 
 
+def _progress_bar(done: int, total: int, width: int = 22) -> str:
+    """A unicode meter, e.g. ``████████░░░░░░░░░░░░░░``."""
+    if total <= 0:
+        return "░" * width
+    filled = round(width * done / total)
+    return "█" * filled + "░" * (width - filled)
+
+
+def _phase_label(content: str) -> str | None:
+    """The grouping label for a task: the short token before the first colon
+    (e.g. ``PHASE 1``, ``SECURITY``, ``Zeli``), or ``None`` when the task has no
+    such prefix. Sentences that merely contain a colon are not treated as labels."""
+    head, sep, _rest = content.partition(":")
+    if sep and 0 < len(head) <= 24 and "." not in head:
+        return head.strip()
+    return None
+
+
 def format_plan_text(plan: Plan) -> str:
-    """Markdown rendering used as text fallback for hosts without MCP Apps."""
+    """Markdown rendering used as text fallback for hosts without MCP Apps (e.g.
+    Claude Code CLI). Adds a progress bar and groups prefixed tasks under their
+    phase so a long plan stays scannable in plain text."""
     c = plan.counts
+    pct = round(100 * c["done"] / c["total"]) if c["total"] else 0
     lines = [
         f"## {plan.name}",
-        f"_{c['done']} of {c['total']} done · {c['in_progress']} in progress · {c['pending']} pending_",
-        "",
+        f"`{_progress_bar(c['done'], c['total'])}`  {c['done']}/{c['total']} done ({pct}%)",
     ]
+    detail = []
+    if c["in_progress"]:
+        detail.append(f"{c['in_progress']} in progress")
+    if c["blocked"]:
+        detail.append(f"{c['blocked']} blocked")
+    if c["pending"]:
+        detail.append(f"{c['pending']} pending")
+    if detail:
+        lines.append("_" + " · ".join(detail) + "_")
+    lines.append("")
+
     if not plan.tasks:
         lines.append("_No tasks yet._")
-    else:
-        for t in plan.tasks:
-            icon = STATUS_ICONS.get(t.status, "[ ]")
-            lines.append(f"{icon} {t.position}. {t.content}")
+        return "\n".join(lines)
+
+    sentinel: object = object()
+    current: object = sentinel
+    for t in plan.tasks:
+        label = _phase_label(t.content)
+        if label != current:
+            # Space out group changes so a header (or a return to ungrouped tasks)
+            # is visually separated from the previous group.
+            if current is not sentinel:
+                lines.append("")
+            if label is not None:
+                lines.append(f"**{label}**")
+            current = label
+        icon = STATUS_ICONS.get(t.status, "[ ]")
+        text = t.content.split(":", 1)[1].strip() if label is not None else t.content
+        lines.append(f"{icon} {t.position}. {text}")
     return "\n".join(lines)
 
 
