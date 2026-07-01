@@ -53,8 +53,13 @@ def test_resource_metadata_shape():
     assert doc["resource"] == AUD
     assert doc["authorization_servers"] == [ISSUER]
 
+@pytest.mark.filterwarnings("ignore:The HMAC key")
 def test_hs256_token_rejected(keypair):
-    """Algorithm confusion guard: an HS256-signed token must be rejected."""
+    """Algorithm confusion guard: an HS256-signed token must be rejected.
+
+    The short HMAC secret here is intentional - we are forging a bad token to
+    prove it is rejected, so PyJWT's weak-key warning is expected and ignored.
+    """
     tok = jwt.encode(
         {"sub": "u", "iss": ISSUER, "aud": AUD, "exp": int(time.time()) + 300},
         "arbitrary-secret",
