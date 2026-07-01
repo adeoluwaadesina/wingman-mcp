@@ -336,5 +336,6 @@ def build_app(cfg: CloudConfig, verifier, on_startup=None) -> Starlette:
 
 def _idp_issuer(cfg: CloudConfig) -> str:
     # WorkOS issuer for the configured client. For AuthKit this is the AuthKit
-    # domain. Wired from env var WORKOS_ISSUER (add to .env.example in Task 11).
-    return os.environ.get("WORKOS_ISSUER", "https://api.workos.com")
+    # domain. Wired from env var WORKOS_ISSUER. Trailing slash stripped so it
+    # matches the token's `iss` claim exactly (the verifier compares exactly).
+    return os.environ.get("WORKOS_ISSUER", "https://api.workos.com").rstrip("/")
