@@ -167,6 +167,105 @@ def _register_panel_tools(mcp: FastMCP, cfg: CloudConfig) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Panel resource + app-only _ui_* tools (the interactive iframe calls these)
+# ---------------------------------------------------------------------------
+
+def _register_ui_tools(mcp: FastMCP, cfg: CloudConfig) -> None:
+    """Serve the panel HTML resource and the 14 app-only tools the iframe uses.
+
+    Same names/shapes as the local server so the bundled panel JS works, but
+    every op is scoped to the authenticated user via identity + store_pg.
+    """
+    from .. import prompts
+    from ..ui import resource as ui_resource
+    from ..ui.resource import MCP_UI_MIME_TYPE, PANEL_URI
+
+    app_only = {"ui": {"visibility": ["app"]}}
+
+    def _uid() -> str:
+        return identity.current_user_id()
+
+    async def _plan_payload(plan_name: str) -> dict[str, Any]:
+        plan = await _load_plan_obj(_uid(), plan_name)
+        return {"text": plan_tools.format_plan_text(plan), "plan": plan_tools.plan_to_dict(plan)}
+
+    @mcp.resource(
+        PANEL_URI, mime_type=MCP_UI_MIME_TYPE, name="Wingman plan panel",
+        description="Interactive plan/to-do panel rendered in a sandboxed iframe.",
+    )
+    def panel() -> str:
+        return ui_resource.render_panel()
+
+    @mcp.tool(name="_ui_get_plan", meta=app_only, description="Internal: fetch plan state for live polling.")
+    async def _ui_get_plan(plan_name: str) -> dict[str, Any]:
+        return await _plan_payload(plan_name)
+
+    @mcp.tool(name="_ui_list_plans", meta=app_only, description="Internal: fetch plan list for picker polling.")
+    async def _ui_list_plans() -> dict[str, Any]:
+        return await tool_list_plans()
+
+    @mcp.tool(name="_ui_tick_task", meta=app_only, description="Internal: tick from UI.")
+    async def _ui_tick_task(plan_name: str, task_id: int) -> dict[str, Any]:
+        return await store_pg.tick_task(_uid(), plan_name, task_id)
+
+    @mcp.tool(name="_ui_update_status", meta=app_only, description="Internal: status change from UI.")
+    async def _ui_update_status(plan_name: str, task_id: int, status: str) -> dict[str, Any]:
+        return await store_pg.update_task_status(_uid(), plan_name, task_id, status)
+
+    @mcp.tool(name="_ui_delete_task", meta=app_only, description="Internal: delete task from UI.")
+    async def _ui_delete_task(plan_name: str, task_id: int) -> dict[str, Any]:
+        await store_pg.delete_task(_uid(), plan_name, task_id)
+        return {"deleted": task_id}
+
+    @mcp.tool(name="_ui_add_task", meta=app_only, description="Internal: add task from UI input.")
+    async def _ui_add_task(plan_name: str, content: str) -> dict[str, Any]:
+        return await store_pg.add_task(_uid(), plan_name, content, max_tasks=cfg.max_tasks_per_plan)
+
+    @mcp.tool(name="_ui_rename_plan", meta=app_only, description="Internal: inline title rename.")
+    async def _ui_rename_plan(current_name: str, new_name: str) -> dict[str, Any]:
+        return await store_pg.rename_plan(_uid(), current_name, new_name)
+
+    @mcp.tool(name="_ui_reorder_tasks", meta=app_only, description="Internal: drag-to-reorder.")
+    async def _ui_reorder_tasks(plan_name: str, ordered_ids: list[int]) -> dict[str, Any]:
+        return await store_pg.reorder_tasks(_uid(), plan_name, ordered_ids)
+
+    @mcp.tool(name="_ui_clear_completed", meta=app_only, description="Internal: bulk-delete completed tasks.")
+    async def _ui_clear_completed(plan_name: str) -> dict[str, Any]:
+        n = await store_pg.clear_completed(_uid(), plan_name)
+        return {"text": f"Cleared {n} completed task(s).", "removed": n}
+
+    @mcp.tool(name="_ui_clear_all", meta=app_only, description="Internal: bulk-delete all tasks (plan kept).")
+    async def _ui_clear_all(plan_name: str) -> dict[str, Any]:
+        n = await store_pg.clear_all(_uid(), plan_name)
+        return {"text": f"Cleared {n} task(s).", "removed": n}
+
+    @mcp.tool(name="_ui_delete_plan", meta=app_only, description="Internal: delete plan from menu.")
+    async def _ui_delete_plan(plan_name: str) -> dict[str, Any]:
+        await store_pg.delete_plan(_uid(), plan_name)
+        return {"deleted": plan_name}
+
+    @mcp.tool(name="_ui_export_markdown", meta=app_only, description="Internal: return plan as markdown.")
+    async def _ui_export_markdown(plan_name: str) -> dict[str, Any]:
+        plan = await _load_plan_obj(_uid(), plan_name)
+        md = plan_tools.export_markdown(plan)
+        return {"text": md, "markdown": md}
+
+    @mcp.tool(name="_ui_get_run_task_prompt", meta=app_only, description="Internal: build Run-this-task prompt for sendMessage.")
+    async def _ui_get_run_task_prompt(plan_name: str, task_id: int) -> dict[str, Any]:
+        text = prompts.render_run_task_prompt(plan_name, task_id)
+        try:
+            await store_pg.update_task_status(_uid(), plan_name, task_id, "in_progress")
+        except Exception:
+            pass
+        return {"text": text, "prompt": text}
+
+    @mcp.tool(name="_ui_get_build_from_chat_prompt", meta=app_only, description="Internal: build the empty-state CTA prompt.")
+    async def _ui_get_build_from_chat_prompt(plan_name: str) -> dict[str, Any]:
+        text = prompts.render_build_from_chat_prompt(plan_name)
+        return {"text": text, "prompt": text}
+
+
+# ---------------------------------------------------------------------------
 # MCP app builder
 # ---------------------------------------------------------------------------
 
@@ -245,6 +344,7 @@ def build_mcp(cfg: CloudConfig) -> FastMCP:
         return await tool_delete_plan(plan_name)
 
     _register_panel_tools(mcp, cfg)
+    _register_ui_tools(mcp, cfg)
     return mcp
 
 
