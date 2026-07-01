@@ -434,3 +434,38 @@ async def clear_all(user_id: str, plan_name: str) -> int:
                 user_id, plan_name,
             )
     return int(result.split()[-1])
+
+
+# ---------------------------------------------------------------------------
+# Operator metrics (content-free aggregates)
+# ---------------------------------------------------------------------------
+
+async def global_stats() -> dict:
+    """Content-free operator metrics: pure counts and timing aggregates.
+
+    Reads NO plan or task content, no names, no emails - only counts, statuses,
+    and timestamps. Powers traction reporting and (later) Wingman Wrapped.
+    """
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            """
+            SELECT
+              (SELECT count(*) FROM users)                                   AS total_users,
+              (SELECT count(*) FROM plans)                                   AS total_plans,
+              (SELECT count(*) FROM tasks)                                   AS total_tasks,
+              (SELECT count(*) FROM tasks WHERE status = 'done')             AS completed_tasks,
+              (SELECT count(*) FROM tasks WHERE status <> 'done')            AS pending_tasks,
+              (SELECT EXTRACT(EPOCH FROM AVG(completed_at - created_at)) / 3600.0
+                 FROM tasks WHERE status = 'done' AND completed_at IS NOT NULL) AS avg_hours_to_complete
+            """
+        )
+    avg = row["avg_hours_to_complete"]
+    return {
+        "total_users": int(row["total_users"]),
+        "total_plans": int(row["total_plans"]),
+        "total_tasks": int(row["total_tasks"]),
+        "completed_tasks": int(row["completed_tasks"]),
+        "pending_tasks": int(row["pending_tasks"]),
+        "avg_hours_to_complete": round(float(avg), 2) if avg is not None else None,
+    }

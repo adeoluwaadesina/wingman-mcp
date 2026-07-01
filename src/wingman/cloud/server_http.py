@@ -336,6 +336,18 @@ def build_app(cfg: CloudConfig, verifier, on_startup=None) -> Starlette:
     async def healthz(request):
         return JSONResponse({"ok": True})
 
+    async def admin_stats(request):
+        # Operator-only, content-free metrics. Guarded by ADMIN_TOKEN (constant
+        # time compare); returns 404 when unset so the route is effectively off.
+        import hmac
+        token = os.environ.get("ADMIN_TOKEN")
+        if not token:
+            return JSONResponse({"error": "not_found"}, status_code=404)
+        supplied = request.headers.get("x-admin-token", "")
+        if not hmac.compare_digest(supplied, token):
+            return JSONResponse({"error": "unauthorized"}, status_code=401)
+        return JSONResponse(await store_pg.global_stats())
+
     @asynccontextmanager
     async def lifespan(app):
         # Run caller startup (e.g. DB pool creation) first, then enter the MCP
@@ -351,6 +363,7 @@ def build_app(cfg: CloudConfig, verifier, on_startup=None) -> Starlette:
     routes = [
         Route("/.well-known/oauth-protected-resource", well_known),
         Route("/healthz", healthz),
+        Route("/admin/stats", admin_stats),
     ]
     app = Starlette(routes=routes, lifespan=lifespan)
     app.mount("/", mcp_app)
@@ -367,7 +380,7 @@ def build_app(cfg: CloudConfig, verifier, on_startup=None) -> Starlette:
     hardening.apply_inner(app, cfg)
     app.add_middleware(
         AuthMiddleware, verifier=verifier,
-        public_paths={"/healthz", "/.well-known/oauth-protected-resource"},
+        public_paths={"/healthz", "/.well-known/oauth-protected-resource", "/admin/stats"},
         resource_metadata_url=f"{cfg.base_url}/.well-known/oauth-protected-resource",
     )
     hardening.apply_outer(app, cfg)
