@@ -55,12 +55,20 @@ async def _run(dsn: str, user_id: str | None, email: str | None, dry_run: bool) 
                 migrated.append(name)
                 continue
             plan = local_db.get_plan(name)
-            # Generous caps: this is a one-time personal import, not a live client.
-            await store_pg.create_plan(uid, name, [], max_plans=1_000_000, max_tasks=1_000_000)
-            for task in plan.tasks:
-                created = await store_pg.add_task(uid, name, task.content, max_tasks=1_000_000)
-                if task.status != "pending":
-                    await store_pg.update_task_status(uid, name, created["id"], task.status)
+            # One transaction per plan (plan row + all tasks via executemany) so a
+            # large import does not make a network round-trip per task. Status and
+            # order are preserved; done tasks get a completed_at.
+            async with pool.acquire() as conn:
+                async with conn.transaction():
+                    await conn.execute(
+                        "INSERT INTO plans (user_id, name) VALUES ($1, $2)", uid, name
+                    )
+                    if plan.tasks:
+                        await conn.executemany(
+                            "INSERT INTO tasks (user_id, plan_name, content, status, sort_order, completed_at) "
+                            "VALUES ($1, $2, $3, $4, $5, CASE WHEN $4 = 'done' THEN now() ELSE NULL END)",
+                            [(uid, name, t.content, t.status, idx) for idx, t in enumerate(plan.tasks)],
+                        )
             migrated.append(name)
         return migrated, skipped
     finally:
