@@ -42,6 +42,7 @@ observability = [
 [project.scripts]
 wingman = "wingman.__main__:main"
 wingman-cloud = "wingman.cloud.__main__:main"
+wingman-migrate = "wingman.cloud.migrate:main"
 
 [project.urls]
 Homepage = "https://github.com/adeoluwaadesina/wingman-mcp"
