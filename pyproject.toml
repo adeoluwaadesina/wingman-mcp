@@ -51,7 +51,7 @@ Repository = "https://github.com/adeoluwaadesina/wingman-mcp"
 where = ["src"]
 
 [tool.setuptools.package-data]
-wingman = ["ui/static/*"]
+wingman = ["ui/static/*", "cloud/migrations/*.sql"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

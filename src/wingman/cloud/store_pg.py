@@ -6,12 +6,18 @@ is parameterized. Mirrors the semantics of wingman.storage.db but multi-tenant.
 """
 from __future__ import annotations
 
-from pathlib import Path
+from importlib.resources import files
 
 import asyncpg
 
-_MIGRATION = Path(__file__).resolve().parents[3] / "migrations" / "001_init.sql"
-SCHEMA_SQL = _MIGRATION.read_text(encoding="utf-8")
+# Load the DDL from package data so it ships inside the wheel/Docker image.
+# A repo-relative path would resolve into site-packages on a real install and
+# crash on import; importlib.resources reads it from wherever the package lives.
+SCHEMA_SQL = (
+    files("wingman.cloud")
+    .joinpath("migrations", "001_init.sql")
+    .read_text(encoding="utf-8")
+)
 
 _POOL: asyncpg.Pool | None = None
 

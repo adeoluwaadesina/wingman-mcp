@@ -317,6 +317,7 @@ Once installed, any MCP-compatible agent can call Wingman's plan management tool
 
 - **No telemetry. No phone-home. No network calls anywhere.** Wingman is a local state-tracking server. Zero outbound connections on any tool path — audited and tested.
 - **Local-only by default.** stdio transport. Your plans live on your machine.
+- **Local vs Cloud.** The no-telemetry guarantee above covers the local `pip install` product, which stays zero-network. The forthcoming hosted **Wingman Cloud** service (in active development) is a separate, opt-in deployment: it stores plans in Postgres (Neon) and uses server-side analytics (Sentry, PostHog) purely to operate the service. It never logs plan or task content. Using the local install never touches any of that.
 - **Sandboxed UI.** The panel runs in a host-sandboxed iframe with a strict CSP (`connect-src 'self'`). No cross-origin access.
 - **Parameterized SQL throughout.** No string-built queries. Validated via full test suite.
 - **Path-traversal safe.** Plan names are allow-list validated — letters, digits, space, hyphen, underscore, apostrophe, period, colon, parentheses. Slashes, backslashes, `..` sequences, null bytes, newlines, and tabs are blocked.
@@ -355,7 +356,9 @@ Once installed, any MCP-compatible agent can call Wingman's plan management tool
 
 ### Wingman Cloud — next
 
-HTTP/SSE transport · OAuth 2.1 · Postgres with user scoping · Fly.io / Railway hosting · mobile Claude support · cross-device plan access
+HTTP/SSE transport · OAuth 2.1 · Postgres with user scoping · Render / Railway hosting · mobile Claude support · cross-device plan access
+
+The Foundation (multi-tenant Postgres storage, OAuth 2.1 resource-server auth, transport hardening) is in active development. Run it locally with `wingman-cloud` once the required env vars (see `.env.example`) are set.
 
 ### v0.2 — shipped ✓
 

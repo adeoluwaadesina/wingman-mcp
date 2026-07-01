@@ -283,7 +283,9 @@ class AuthMiddleware(BaseHTTPMiddleware):
 # ASGI app builder
 # ---------------------------------------------------------------------------
 
-def build_app(cfg: CloudConfig, verifier) -> Starlette:
+def build_app(cfg: CloudConfig, verifier, on_startup=None) -> Starlette:
+    from contextlib import asynccontextmanager
+
     mcp = build_mcp(cfg)
     mcp_app = mcp.streamable_http_app()  # ASGI sub-app
 
@@ -295,11 +297,23 @@ def build_app(cfg: CloudConfig, verifier) -> Starlette:
     async def healthz(request):
         return JSONResponse({"ok": True})
 
+    @asynccontextmanager
+    async def lifespan(app):
+        # Run caller startup (e.g. DB pool creation) first, then enter the MCP
+        # streamable-http session manager, which the mounted sub-app REQUIRES.
+        # Mounting a sub-app does not run its lifespan automatically, so we run
+        # it from the parent here; without this, MCP calls fail with
+        # "Task group is not initialized".
+        if on_startup is not None:
+            await on_startup()
+        async with mcp_app.router.lifespan_context(app):
+            yield
+
     routes = [
         Route("/.well-known/oauth-protected-resource", well_known),
         Route("/healthz", healthz),
     ]
-    app = Starlette(routes=routes)
+    app = Starlette(routes=routes, lifespan=lifespan)
     app.mount("/", mcp_app)
 
     # Middleware ordering (Starlette: last added = outermost = first inbound).
