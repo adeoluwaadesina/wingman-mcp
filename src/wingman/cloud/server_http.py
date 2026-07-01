@@ -249,24 +249,34 @@ log = logging.getLogger("wingman.cloud")
 
 
 class AuthMiddleware(BaseHTTPMiddleware):
-    def __init__(self, app, verifier, public_paths):
+    def __init__(self, app, verifier, public_paths, resource_metadata_url=None):
         super().__init__(app)
         self._verifier = verifier
         self._public = public_paths
+        # RFC 9728: a 401 points clients at the protected-resource metadata via
+        # WWW-Authenticate, so MCP clients know where to begin the OAuth flow.
+        self._challenge = (
+            f'Bearer resource_metadata="{resource_metadata_url}"'
+            if resource_metadata_url else None
+        )
+
+    def _unauth(self, body):
+        headers = {"WWW-Authenticate": self._challenge} if self._challenge else None
+        return JSONResponse(body, status_code=401, headers=headers)
 
     async def dispatch(self, request: Request, call_next):
         if request.url.path in self._public:
             return await call_next(request)
         header = request.headers.get("authorization", "")
         if not header.lower().startswith("bearer "):
-            return JSONResponse({"error": "unauthenticated"}, status_code=401)
+            return self._unauth({"error": "unauthenticated"})
         token = header.split(" ", 1)[1].strip()
         try:
             claims = self._verifier.verify(token)
         except auth_mod.InvalidToken:
             client = request.client.host if request.client else "?"
             log.warning("auth failure from ip=%s path=%s", client, request.url.path)
-            return JSONResponse({"error": "invalid_token"}, status_code=401)
+            return self._unauth({"error": "invalid_token"})
         except Exception:
             log.exception("verifier error path=%s", request.url.path)
             return JSONResponse({"error": "server_error"}, status_code=503)
@@ -329,6 +339,7 @@ def build_app(cfg: CloudConfig, verifier, on_startup=None) -> Starlette:
     app.add_middleware(
         AuthMiddleware, verifier=verifier,
         public_paths={"/healthz", "/.well-known/oauth-protected-resource"},
+        resource_metadata_url=f"{cfg.base_url}/.well-known/oauth-protected-resource",
     )
     hardening.apply_outer(app, cfg)
     return app

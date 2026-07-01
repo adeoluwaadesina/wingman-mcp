@@ -18,15 +18,25 @@ async def _whoami(request):
     return JSONResponse({"uid": identity.current_user_id()})
 
 
-def _app(monkeypatch):
+def _app(monkeypatch, resource_metadata_url=None):
     async def _noop_upsert(*a, **k):
         return None
     monkeypatch.setattr(server_http.store_pg, "upsert_user", _noop_upsert)
     routes = [Route("/whoami", _whoami)]
     app = Starlette(routes=routes)
     app.add_middleware(server_http.AuthMiddleware, verifier=_AllowVerifier(),
-                       public_paths={"/healthz", "/.well-known/oauth-protected-resource"})
+                       public_paths={"/healthz", "/.well-known/oauth-protected-resource"},
+                       resource_metadata_url=resource_metadata_url)
     return app
+
+
+def test_401_carries_www_authenticate_resource_metadata(monkeypatch):
+    url = "https://w.example.com/.well-known/oauth-protected-resource"
+    client = TestClient(_app(monkeypatch, resource_metadata_url=url))
+    resp = client.get("/whoami")  # no token
+    assert resp.status_code == 401
+    challenge = resp.headers.get("www-authenticate", "")
+    assert f'resource_metadata="{url}"' in challenge
 
 
 def test_missing_token_401(monkeypatch):
