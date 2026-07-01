@@ -273,9 +273,19 @@ class AuthMiddleware(BaseHTTPMiddleware):
         token = header.split(" ", 1)[1].strip()
         try:
             claims = self._verifier.verify(token)
-        except auth_mod.InvalidToken:
+        except auth_mod.InvalidToken as exc:
             client = request.client.host if request.client else "?"
-            log.warning("auth failure from ip=%s path=%s", client, request.url.path)
+            # Log the rejection reason + the token's unverified iss/aud (not PII)
+            # so audience/issuer mismatches are diagnosable in production.
+            try:
+                import jwt as _jwt
+                unv = _jwt.decode(token, options={"verify_signature": False})
+                log.warning(
+                    "auth failure ip=%s reason=%s token_iss=%s token_aud=%s",
+                    client, exc, unv.get("iss"), unv.get("aud"),
+                )
+            except Exception:
+                log.warning("auth failure ip=%s reason=%s (token not a JWT)", client, exc)
             return self._unauth({"error": "invalid_token"})
         except Exception:
             log.exception("verifier error path=%s", request.url.path)
