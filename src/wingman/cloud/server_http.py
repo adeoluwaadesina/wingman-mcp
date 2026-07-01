@@ -177,11 +177,30 @@ def build_mcp(cfg: CloudConfig) -> FastMCP:
     unchanged Wingman. Panel tools (show_plan, show_plans) carry the same
     _meta / resourceUri as local so the iframe mounts identically.
     """
+    # DNS-rebinding protection validates the Host header against an allow-list.
+    # The default permits localhost but not our deployment host, so a request
+    # behind Render (Host: <app>.onrender.com) is rejected with 421. Allow the
+    # host derived from WINGMAN_BASE_URL, plus localhost (wildcard port) for the
+    # smoke test, plus any extra hosts from ALLOWED_HOSTS.
+    from urllib.parse import urlparse
+    from mcp.server.transport_security import TransportSecuritySettings
+
+    base_host = urlparse(cfg.base_url).netloc
+    allowed_hosts = ["127.0.0.1:*", "localhost:*"]
+    if base_host:
+        allowed_hosts.append(base_host)
+    allowed_hosts += [h.strip() for h in os.environ.get("ALLOWED_HOSTS", "").split(",") if h.strip()]
+
     mcp = FastMCP(
         name="wingman",
         instructions=(
             "Wingman is an interactive plan/to-do panel for this conversation. "
             "Plans persist across messages and sync across your devices."
+        ),
+        transport_security=TransportSecuritySettings(
+            enable_dns_rebinding_protection=True,
+            allowed_hosts=allowed_hosts,
+            allowed_origins=cfg.allowed_origins,
         ),
     )
 
