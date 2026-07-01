@@ -53,3 +53,19 @@ def resource_metadata(base_url: str, authorization_servers: list[str]) -> dict:
         "authorization_servers": authorization_servers,
         "bearer_methods_supported": ["header"],
     }
+
+
+async def fetch_userinfo(userinfo_url: str, token: str) -> dict | None:
+    """Fetch profile claims (email, name) from the IdP userinfo endpoint.
+
+    Returns None on any failure so enrichment never blocks a request.
+    """
+    import httpx
+
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.get(userinfo_url, headers={"Authorization": f"Bearer {token}"})
+            resp.raise_for_status()
+            return resp.json()
+    except Exception:
+        return None

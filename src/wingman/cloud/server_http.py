@@ -368,7 +368,7 @@ log = logging.getLogger("wingman.cloud")
 
 
 class AuthMiddleware(BaseHTTPMiddleware):
-    def __init__(self, app, verifier, public_paths, resource_metadata_url=None):
+    def __init__(self, app, verifier, public_paths, resource_metadata_url=None, userinfo_url=None):
         super().__init__(app)
         self._verifier = verifier
         self._public = public_paths
@@ -378,6 +378,10 @@ class AuthMiddleware(BaseHTTPMiddleware):
             f'Bearer resource_metadata="{resource_metadata_url}"'
             if resource_metadata_url else None
         )
+        # WorkOS access tokens carry no email; fetch it from the IdP userinfo
+        # endpoint once per user (cached), so we can store it for Wrapped.
+        self._userinfo_url = userinfo_url
+        self._enriched: set[str] = set()
 
     def _unauth(self, body):
         headers = {"WWW-Authenticate": self._challenge} if self._challenge else None
@@ -410,9 +414,23 @@ class AuthMiddleware(BaseHTTPMiddleware):
             log.exception("verifier error path=%s", request.url.path)
             return JSONResponse({"error": "server_error"}, status_code=503)
         uid = claims["sub"]
-        tok = identity.set_current_user(uid, claims.get("email"), claims.get("name"))
+        email = claims.get("email")
+        name = claims.get("name")
+        # Enrich from userinfo once per user (the access token lacks email).
+        if self._userinfo_url and uid not in self._enriched:
+            info = await auth_mod.fetch_userinfo(self._userinfo_url, token)
+            if info:
+                email = info.get("email") or email
+                name = (
+                    info.get("name")
+                    or " ".join(p for p in (info.get("given_name"), info.get("family_name")) if p)
+                    or " ".join(p for p in (info.get("first_name"), info.get("last_name")) if p)
+                    or name
+                ) or None
+            self._enriched.add(uid)
+        tok = identity.set_current_user(uid, email, name)
         try:
-            await store_pg.upsert_user(uid, claims.get("email"), claims.get("name"))
+            await store_pg.upsert_user(uid, email, name)
             return await call_next(request)
         finally:
             identity.reset(tok)
@@ -422,7 +440,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
 # ASGI app builder
 # ---------------------------------------------------------------------------
 
-def build_app(cfg: CloudConfig, verifier, on_startup=None) -> Starlette:
+def build_app(cfg: CloudConfig, verifier, on_startup=None, userinfo_url=None) -> Starlette:
     from contextlib import asynccontextmanager
 
     mcp = build_mcp(cfg)
@@ -482,6 +500,7 @@ def build_app(cfg: CloudConfig, verifier, on_startup=None) -> Starlette:
         AuthMiddleware, verifier=verifier,
         public_paths={"/healthz", "/.well-known/oauth-protected-resource", "/admin/stats"},
         resource_metadata_url=f"{cfg.base_url}/.well-known/oauth-protected-resource",
+        userinfo_url=userinfo_url,
     )
     hardening.apply_outer(app, cfg)
     return app

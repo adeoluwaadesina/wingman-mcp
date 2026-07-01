@@ -16,17 +16,18 @@ from .config_cloud import CloudConfig
 log = logging.getLogger("wingman.cloud")
 
 
-def _discover_jwks_uri(issuer: str) -> str | None:
-    """Read jwks_uri from the issuer's OpenID discovery document."""
+def _discover(issuer: str) -> tuple[str | None, str | None]:
+    """Read (jwks_uri, userinfo_endpoint) from the issuer's OpenID discovery."""
     import httpx
 
     try:
         resp = httpx.get(f"{issuer}/.well-known/openid-configuration", timeout=10)
         resp.raise_for_status()
-        return resp.json().get("jwks_uri")
+        doc = resp.json()
+        return doc.get("jwks_uri"), doc.get("userinfo_endpoint")
     except Exception as exc:  # unreachable issuer must not hard-crash boot here
-        log.warning("jwks discovery failed for %s: %s", issuer, exc)
-        return None
+        log.warning("oidc discovery failed for %s: %s", issuer, exc)
+        return None, None
 
 
 def build_from_env(connect: bool = True):
@@ -44,8 +45,11 @@ def build_from_env(connect: bool = True):
     # /.well-known/jwks.json some providers use). WORKOS_JWKS_URI overrides;
     # discovery only runs on real startup (connect=True) so tests stay offline.
     jwks_uri = os.environ.get("WORKOS_JWKS_URI")
-    if not jwks_uri and connect:
-        jwks_uri = _discover_jwks_uri(issuer)
+    userinfo_url = os.environ.get("WORKOS_USERINFO_URL")
+    if connect and (not jwks_uri or not userinfo_url):
+        d_jwks, d_userinfo = _discover(issuer)
+        jwks_uri = jwks_uri or d_jwks
+        userinfo_url = userinfo_url or d_userinfo
     if not jwks_uri:
         jwks_uri = f"{issuer}/.well-known/jwks.json"
 
@@ -66,7 +70,7 @@ def build_from_env(connect: bool = True):
             await store_pg.init_db(pool)
             store_pg.set_pool(pool)
 
-    return server_http.build_app(cfg, verifier, on_startup=on_startup)
+    return server_http.build_app(cfg, verifier, on_startup=on_startup, userinfo_url=userinfo_url)
 
 
 def main() -> None:

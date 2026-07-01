@@ -30,6 +30,27 @@ def _app(monkeypatch, resource_metadata_url=None):
     return app
 
 
+def test_userinfo_enriches_email_and_name(monkeypatch):
+    captured = {}
+
+    async def _capture_upsert(uid, email, name):
+        captured.update(uid=uid, email=email, name=name)
+
+    async def _fake_userinfo(url, token):
+        return {"email": "real@example.com", "name": "Real Name"}
+
+    monkeypatch.setattr(server_http.store_pg, "upsert_user", _capture_upsert)
+    monkeypatch.setattr(server_http.auth_mod, "fetch_userinfo", _fake_userinfo)
+    app = Starlette(routes=[Route("/whoami", _whoami)])
+    app.add_middleware(server_http.AuthMiddleware, verifier=_AllowVerifier(),
+                       public_paths={"/healthz"}, userinfo_url="https://idp.example.com/userinfo")
+    r = TestClient(app).get("/whoami", headers={"Authorization": "Bearer good"})
+    assert r.status_code == 200
+    # userinfo email/name override the (absent-here) token claims
+    assert captured["email"] == "real@example.com"
+    assert captured["name"] == "Real Name"
+
+
 def test_401_carries_www_authenticate_resource_metadata(monkeypatch):
     url = "https://w.example.com/.well-known/oauth-protected-resource"
     client = TestClient(_app(monkeypatch, resource_metadata_url=url))
