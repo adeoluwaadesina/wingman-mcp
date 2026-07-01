@@ -48,6 +48,28 @@ def test_bad_signature_rejected(keypair):
     with pytest.raises(auth.InvalidToken):
         v.verify(_make_token(other))
 
+class _NoAudVerifier(auth.TokenVerifier):
+    def __init__(self, pubkey):
+        super().__init__(ISSUER, None, "https://idp.example.com/jwks")  # audience off
+        self._pub = pubkey
+    def _signing_key(self, token):
+        return self._pub
+
+
+def test_no_audience_accepts_client_id_aud(keypair):
+    # WorkOS AuthKit binds aud to the (dynamic) OAuth client id, not our URL.
+    # With audience unset we must accept it, validating issuer/signature/expiry.
+    v = _NoAudVerifier(keypair.public_key())
+    claims = v.verify(_make_token(keypair, aud="client_01KWEMPXR2EJKKTAE8E7XRHA73"))
+    assert claims["sub"] == "user_xyz"
+
+
+def test_no_audience_still_enforces_issuer(keypair):
+    v = _NoAudVerifier(keypair.public_key())
+    with pytest.raises(auth.InvalidToken):
+        v.verify(_make_token(keypair, iss="https://evil-issuer.example.com"))
+
+
 def test_resource_metadata_shape():
     doc = auth.resource_metadata(AUD, [ISSUER])
     assert doc["resource"] == AUD

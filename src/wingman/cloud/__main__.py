@@ -49,9 +49,13 @@ def build_from_env(connect: bool = True):
     if not jwks_uri:
         jwks_uri = f"{issuer}/.well-known/jwks.json"
 
+    # Audience is opt-in: WorkOS AuthKit binds token aud to the OAuth client id
+    # (dynamic under DCR), not the resource URL, so leave it unset and validate
+    # via issuer + signature + expiry. Set WORKOS_AUDIENCE only if your IdP binds
+    # aud to this server's resource URL.
     verifier = auth_mod.TokenVerifier(
         issuer=issuer,
-        audience=cfg.base_url,
+        audience=os.environ.get("WORKOS_AUDIENCE") or None,
         jwks_uri=jwks_uri,
     )
 

@@ -29,14 +29,17 @@ class TokenVerifier:
     def verify(self, token: str) -> dict:
         try:
             key = self._signing_key(token)
-            return jwt.decode(
-                token,
-                key,
-                algorithms=["RS256"],
-                audience=self._audience,
-                issuer=self._issuer,
-                options={"require": ["exp", "sub"]},
-            )
+            # Audience is optional. Providers like WorkOS AuthKit set the token
+            # `aud` to the OAuth client's id (dynamic under DCR), not the
+            # resource URL, so a fixed-audience check cannot pass. When no
+            # audience is configured we validate issuer + signature + expiry,
+            # which cryptographically proves the token came from our trusted
+            # IdP tenant. Set audience only if the IdP binds aud to the resource.
+            options = {"require": ["exp", "sub"], "verify_aud": self._audience is not None}
+            kwargs = {"algorithms": ["RS256"], "issuer": self._issuer, "options": options}
+            if self._audience is not None:
+                kwargs["audience"] = self._audience
+            return jwt.decode(token, key, **kwargs)
         except InvalidToken:
             raise
         except Exception as exc:  # jwt.* errors, key errors, etc.
