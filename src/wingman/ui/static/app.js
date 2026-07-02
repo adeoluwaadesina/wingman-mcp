@@ -2,7 +2,7 @@
  *
  * Uses the MCP Apps SDK (@modelcontextprotocol/ext-apps, exposed here as the
  * global `WingmanMCP`). The panel resource is static and carries no plan data;
- * the plan name + initial state arrive via the render-data channel — the
+ * the plan name + initial state arrive via the render-data channel - the
  * `toolresult` notification carrying the calling tool's structuredContent.
  *
  *   1. new App({name, version})
@@ -18,7 +18,7 @@
   // The host may re-evaluate this script when new render data arrives (it
   // re-mounts the View). Without a guard that re-run creates a SECOND App +
   // connect() ("AppBridge received a second ui/initialize") and double-binds
-  // every DOM handler — later clicks then hit a stale/disconnected App and
+  // every DOM handler - later clicks then hit a stale/disconnected App and
   // silently no-op, which is exactly the "rename changes text but doesn't
   // save" symptom. We bind everything exactly once per document. A genuinely
   // fresh iframe document gets a fresh `window` and boots normally.
@@ -32,6 +32,12 @@
   const POLL_SLOW_MS = 10000;
   const IDLE_THRESHOLD_MS = 30000;
   const THEME_KEY = "wingman:theme";
+
+  // Media queries drive interaction mode. Checked live (.matches) so rotation
+  // or window resizing picks the right behavior without a reload.
+  const REDUCED = window.matchMedia("(prefers-reduced-motion: reduce)");
+  const COARSE = window.matchMedia("(pointer: coarse)");
+  const SHEET_MQ = window.matchMedia("(max-width: 480px) and (pointer: coarse)");
 
   let lastChangeAt = Date.now();
   let currentPollMs = POLL_FAST_MS;
@@ -133,6 +139,32 @@
     }
   }
 
+  // ---------- Count-up tween ----------
+  // The big readouts (done count, percent) tween between values instead of
+  // snapping. One rAF loop per element; interrupted tweens restart from the
+  // currently displayed value so rapid ticks stay smooth.
+  const numTweens = new WeakMap();
+  function setNumber(el, value) {
+    const target = Math.round(Number(value) || 0);
+    const from = parseInt(el.textContent, 10) || 0;
+    if (numTweens.has(el)) cancelAnimationFrame(numTweens.get(el));
+    if (REDUCED.matches || from === target || document.visibilityState !== "visible") {
+      el.textContent = String(target);
+      numTweens.delete(el);
+      return;
+    }
+    const t0 = performance.now();
+    const dur = 480;
+    function frame(now) {
+      const p = Math.min(1, (now - t0) / dur);
+      const eased = 1 - Math.pow(1 - p, 4); // ease-out-quart
+      el.textContent = String(Math.round(from + (target - from) * eased));
+      if (p < 1) numTweens.set(el, requestAnimationFrame(frame));
+      else numTweens.delete(el);
+    }
+    numTweens.set(el, requestAnimationFrame(frame));
+  }
+
   // ---------- Render ----------
   function render(payload, fromPoll) {
     if (payload && Array.isArray(payload.plans) && !payload.plan) {
@@ -165,7 +197,7 @@
     const titleEl = $role("title");
     titleEl.style.cursor = "";
     titleEl.style.pointerEvents = "";
-    // contenteditable stays "false" until user clicks — existing click handler manages that.
+    // contenteditable stays "false" until user clicks - existing click handler manages that.
     if (titleEl.getAttribute("contenteditable") !== "true") {
       titleEl.textContent = plan.name;
     }
@@ -193,9 +225,9 @@
     empty.hidden = !isEmpty;
 
     if (!isEmpty) {
-      $role("p-done").textContent = String(done);
+      setNumber($role("p-done"), done);
       $role("p-total").textContent = "of " + total;
-      $role("p-pct").textContent = String(pct);
+      setNumber($role("p-pct"), pct);
       // The fill scales (compositor-only) instead of animating width; the
       // track draws one notch per task via --segs.
       $role("p-fill").style.transform = "scaleX(" + pct / 100 + ")";
@@ -281,12 +313,113 @@
     startPoll();
   }
 
+  // ---------- Task list: reconciling renderer ----------
+  // Rows are keyed by task id and REUSED across renders, so state changes
+  // animate in place (strike/settle) instead of the whole list repainting.
+  // Rows mid-exit are ignored by the reconciler and by reorder collection.
+  let dragging = false; // true while Sortable owns the list
+
+  const liveRows = () =>
+    $$(".task-row").filter((el) => !el.classList.contains("row-exit"));
+
   function renderTasks(tasks) {
+    if (dragging) return; // never fight an active drag; next poll settles it
     const list = $role("task-list");
-    list.innerHTML = "";
+    const byId = new Map();
+    liveRows().forEach((el) => byId.set(el.dataset.taskId, el));
+
+    let anchor = null; // last correctly-placed row
+    const seen = new Set();
     for (const t of tasks) {
-      list.appendChild(taskRow(t));
+      const key = String(t.id);
+      seen.add(key);
+      let row = byId.get(key);
+      if (row) {
+        updateRow(row, t);
+      } else {
+        row = taskRow(t);
+        if (!REDUCED.matches) {
+          row.classList.add("row-enter");
+          row.addEventListener("animationend", () => row.classList.remove("row-enter"), { once: true });
+        }
+      }
+      const desired = anchor ? anchor.nextElementSibling : list.firstElementChild;
+      if (row !== desired) list.insertBefore(row, desired);
+      anchor = row;
     }
+    byId.forEach((el, key) => {
+      if (!seen.has(key)) removeRow(el);
+    });
+  }
+
+  function updateRow(row, t) {
+    row._task = t;
+    const textEl = row.querySelector(".task-text");
+    if (textEl.textContent !== t.content) textEl.textContent = t.content;
+    const wasDone = row.classList.contains("is-done");
+    row.classList.toggle("is-done", t.status === "done");
+    row.classList.toggle("is-in-progress", t.status === "in_progress");
+    const cb = row.querySelector(".checkbox");
+    cb.setAttribute("aria-checked", String(t.status === "done"));
+    if (!wasDone && t.status === "done") celebrateDone(row);
+  }
+
+  function celebrateDone(row) {
+    if (REDUCED.matches) return;
+    row.classList.remove("just-done");
+    void row.offsetWidth; // restart the settle animation cleanly
+    row.classList.add("just-done");
+    setTimeout(() => row.classList.remove("just-done"), 550);
+  }
+
+  // Animate a deleted row out (height collapse + fade), then detach it.
+  function removeRow(row) {
+    if (row.classList.contains("row-exit")) return;
+    closeSwipe(row);
+    row.classList.add("row-exit");
+    if (REDUCED.matches) {
+      row.remove();
+      return;
+    }
+    row.style.height = row.offsetHeight + "px";
+    void row.offsetHeight; // commit the starting height
+    row.style.height = "0px";
+    setTimeout(() => row.remove(), 240);
+  }
+
+  // ---------- Task status actions (optimistic: animate first, sync after) ----------
+  async function setTaskStatus(row, status) {
+    const t = row._task;
+    if (!t) return;
+    updateRow(row, Object.assign({}, t, { status: status }));
+    await callTool("_ui_update_status", {
+      plan_name: currentPlanName,
+      task_id: t.id,
+      status: status,
+    });
+    await refresh();
+  }
+
+  function toggleDone(row) {
+    const t = row._task;
+    if (!t) return;
+    return setTaskStatus(row, t.status === "done" ? "pending" : "done");
+  }
+
+  // pending -> in_progress -> pending; a done task re-opens straight into
+  // in_progress ("back in flight"). The checkbox still owns done <-> pending.
+  function toggleProgress(row) {
+    const t = row._task;
+    if (!t) return;
+    return setTaskStatus(row, t.status === "in_progress" ? "pending" : "in_progress");
+  }
+
+  async function deleteTask(row) {
+    const t = row._task;
+    if (!t) return;
+    removeRow(row); // optimistic exit animation while the tool call runs
+    await callTool("_ui_delete_task", { plan_name: currentPlanName, task_id: t.id });
+    await refresh();
   }
 
   function taskRow(t) {
@@ -295,50 +428,60 @@
     if (t.status === "done") li.classList.add("is-done");
     if (t.status === "in_progress") li.classList.add("is-in-progress");
     li.dataset.taskId = String(t.id);
+    li._task = t;
 
     const pos = t.position || t.id;
     li.innerHTML = `
-      <span class="drag-handle" aria-hidden="true">
-        <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
-          <circle cx="9" cy="6" r="1.6" fill="currentColor"/><circle cx="15" cy="6" r="1.6" fill="currentColor"/>
-          <circle cx="9" cy="12" r="1.6" fill="currentColor"/><circle cx="15" cy="12" r="1.6" fill="currentColor"/>
-          <circle cx="9" cy="18" r="1.6" fill="currentColor"/><circle cx="15" cy="18" r="1.6" fill="currentColor"/>
-        </svg>
-      </span>
-      <button class="checkbox" role="checkbox" aria-checked="${t.status === "done"}" aria-label="Toggle task ${pos} done">
-        <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
-          <path d="M5 12l4 4 10-10" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </button>
-      <span class="task-text"></span>
-      <button class="row-btn delete" aria-label="Delete task ${pos}">
-        <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
-      </button>
-      <button class="row-btn run" aria-label="Run task ${pos}">
-        <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M7 5l12 7-12 7z" fill="currentColor"/></svg>
-      </button>
+      <div class="swipe-under" aria-hidden="true">
+        <span class="su-done">
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+            <path d="M5 12l4 4 10-10" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </span>
+        <button class="su-delete" tabindex="-1" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M4.5 6.5h15m-11 0V5a1.5 1.5 0 0 1 1.5-1.5h4A1.5 1.5 0 0 1 15.5 5v1.5m-9 0l1 12A1.8 1.8 0 0 0 9.3 20.5h5.4a1.8 1.8 0 0 0 1.8-1.7l1-12.3" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+      <div class="row-main">
+        <span class="drag-handle" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+            <circle cx="9" cy="6" r="1.6" fill="currentColor"/><circle cx="15" cy="6" r="1.6" fill="currentColor"/>
+            <circle cx="9" cy="12" r="1.6" fill="currentColor"/><circle cx="15" cy="12" r="1.6" fill="currentColor"/>
+            <circle cx="9" cy="18" r="1.6" fill="currentColor"/><circle cx="15" cy="18" r="1.6" fill="currentColor"/>
+          </svg>
+        </span>
+        <button class="checkbox" role="checkbox" aria-checked="${t.status === "done"}" aria-label="Toggle task ${pos} done">
+          <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+            <path d="M5 12l4 4 10-10" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <span class="task-text"></span>
+        <button class="row-btn delete" aria-label="Delete task ${pos}">
+          <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
+        </button>
+        <button class="row-btn prog" aria-label="Toggle task ${pos} in progress">
+          <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
+            <circle cx="12" cy="12" r="8.2" stroke="currentColor" stroke-width="1.8" fill="none"/>
+            <path d="M12 8v4l2.8 2" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <button class="row-btn run" aria-label="Run task ${pos}">
+          <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M7 5l12 7-12 7z" fill="currentColor"/></svg>
+        </button>
+      </div>
     `;
     li.querySelector(".task-text").textContent = t.content;
 
-    li.querySelector(".checkbox").addEventListener("click", async () => {
-      const next = t.status === "done" ? "pending" : "done";
-      await callTool("_ui_update_status", {
-        plan_name: currentPlanName,
-        task_id: t.id,
-        status: next,
-      });
-      await refresh();
-    });
-
-    li.querySelector(".row-btn.delete").addEventListener("click", async () => {
-      await callTool("_ui_delete_task", { plan_name: currentPlanName, task_id: t.id });
-      await refresh();
-    });
+    li.querySelector(".checkbox").addEventListener("click", () => toggleDone(li));
+    li.querySelector(".row-btn.prog").addEventListener("click", () => toggleProgress(li));
+    li.querySelector(".row-btn.delete").addEventListener("click", () => deleteTask(li));
+    li.querySelector(".su-delete").addEventListener("click", () => deleteTask(li));
 
     li.querySelector(".row-btn.run").addEventListener("click", async () => {
+      const task = li._task || t;
       const res = await callTool("_ui_get_run_task_prompt", {
         plan_name: currentPlanName,
-        task_id: t.id,
+        task_id: task.id,
       });
       const text = res && (res.prompt || res.text);
       if (text) {
@@ -348,7 +491,87 @@
       await refresh();
     });
 
+    attachSwipe(li);
     return li;
+  }
+
+  // ---------- Swipe gestures (touch only) ----------
+  // Right past threshold = toggle done. Left past threshold = snap open and
+  // reveal delete. Direction-locked: vertical movement stays native scroll,
+  // and the drag handle keeps its own gesture (Sortable owns it).
+  let openSwipeRow = null;
+  const SWIPE_OPEN_PX = 84;   // width of the revealed delete zone
+  const SWIPE_DONE_PX = 72;   // rightward commit threshold
+  const SWIPE_DEL_PX = 56;    // leftward snap-open threshold
+  const SWIPE_LOCK_PX = 10;   // movement before we pick an axis
+
+  function closeSwipe(row) {
+    const main = row.querySelector(".row-main");
+    if (main) main.style.transform = "";
+    row.classList.remove("swipe-open", "swiping", "swipe-armed");
+    delete row.dataset.swipe;
+    if (openSwipeRow === row) openSwipeRow = null;
+  }
+
+  function attachSwipe(li) {
+    const main = li.querySelector(".row-main");
+    let startX = 0, startY = 0, dx = 0, axis = null, base = 0;
+
+    main.addEventListener("touchstart", (e) => {
+      if (!COARSE.matches || e.touches.length !== 1) return;
+      if (e.target.closest(".drag-handle")) return; // Sortable owns that gesture
+      if (openSwipeRow && openSwipeRow !== li) closeSwipe(openSwipeRow);
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+      axis = null;
+      dx = 0;
+      base = li.classList.contains("swipe-open") ? -SWIPE_OPEN_PX : 0;
+    }, { passive: true });
+
+    main.addEventListener("touchmove", (e) => {
+      if (!COARSE.matches || e.touches.length !== 1) return;
+      if (e.target.closest(".drag-handle")) return;
+      const mx = e.touches[0].clientX - startX;
+      const my = e.touches[0].clientY - startY;
+      if (axis === null) {
+        if (Math.abs(mx) < SWIPE_LOCK_PX && Math.abs(my) < SWIPE_LOCK_PX) return;
+        axis = Math.abs(mx) > Math.abs(my) ? "x" : "y";
+        if (axis === "x") {
+          li.classList.add("swiping");
+          main.style.transition = "none";
+        }
+      }
+      if (axis !== "x") return;
+      e.preventDefault(); // we own this horizontal drag
+      dx = base + mx;
+      // Rubber-band past the useful range so the row never flies away.
+      const capped = dx > 0
+        ? Math.min(dx, SWIPE_DONE_PX + (dx - SWIPE_DONE_PX) * 0.25, SWIPE_DONE_PX + 26)
+        : Math.max(dx, -SWIPE_OPEN_PX + (dx + SWIPE_OPEN_PX) * 0.25, -SWIPE_OPEN_PX - 26);
+      main.style.transform = "translateX(" + capped + "px)";
+      li.dataset.swipe = dx > 0 ? "right" : "left";
+      li.classList.toggle("swipe-armed", dx > SWIPE_DONE_PX || dx < -SWIPE_DEL_PX);
+    }, { passive: false });
+
+    const settle = () => {
+      if (axis !== "x") { axis = null; return; }
+      main.style.transition = ""; // hand back to the CSS spring
+      li.classList.remove("swiping", "swipe-armed");
+      if (dx > SWIPE_DONE_PX) {
+        closeSwipe(li);
+        toggleDone(li);
+      } else if (dx < -SWIPE_DEL_PX) {
+        li.classList.add("swipe-open");
+        li.dataset.swipe = "left";
+        main.style.transform = "translateX(-" + SWIPE_OPEN_PX + "px)";
+        openSwipeRow = li;
+      } else {
+        closeSwipe(li);
+      }
+      axis = null;
+    };
+    main.addEventListener("touchend", settle);
+    main.addEventListener("touchcancel", settle);
   }
 
   // ---------- Menu ----------
@@ -360,16 +583,25 @@
     }
   }
   // The document-level click-outside listener is attached only while the menu
-  // is open, and torn down when it closes — no permanently-live listener.
+  // is open, and torn down when it closes - no permanently-live listener.
   let outsideHandler = null;
   function isMenuOpen() {
     return !$role("menu").hasAttribute("hidden");
   }
+  let menuCloseTimer = null;
   function openMenu() {
-    $role("menu").removeAttribute("hidden");
+    const menu = $role("menu");
+    const backdrop = $role("menu-backdrop");
+    if (menuCloseTimer) { clearTimeout(menuCloseTimer); menuCloseTimer = null; }
+    menu.classList.remove("menu-leaving");
+    backdrop.classList.remove("menu-leaving");
+    menu.style.transform = "";
+    menu.removeAttribute("hidden");
+    // The backdrop only paints in bottom-sheet mode (CSS gates it), so it is
+    // safe to unhide unconditionally.
+    backdrop.removeAttribute("hidden");
     if (!outsideHandler) {
       outsideHandler = (e) => {
-        const menu = $role("menu");
         const trigger = $role("menu-toggle");
         if (!menu.contains(e.target) && e.target !== trigger && !trigger.contains(e.target)) {
           closeMenu();
@@ -380,23 +612,76 @@
     }
   }
   function closeMenu() {
-    $role("menu").setAttribute("hidden", "");
+    const menu = $role("menu");
+    const backdrop = $role("menu-backdrop");
     if (outsideHandler) {
       document.removeEventListener("click", outsideHandler);
       outsideHandler = null;
+    }
+    if (menu.hasAttribute("hidden")) {
+      backdrop.setAttribute("hidden", "");
+      return;
+    }
+    // Bottom-sheet mode slides out before hiding; everything else hides now.
+    if (SHEET_MQ.matches && !REDUCED.matches && !menuCloseTimer) {
+      menu.style.transform = "";
+      menu.classList.add("menu-leaving");
+      backdrop.classList.add("menu-leaving");
+      menuCloseTimer = setTimeout(() => {
+        menuCloseTimer = null;
+        menu.classList.remove("menu-leaving");
+        backdrop.classList.remove("menu-leaving");
+        menu.setAttribute("hidden", "");
+        backdrop.setAttribute("hidden", "");
+      }, 210);
+    } else if (!menuCloseTimer) {
+      menu.setAttribute("hidden", "");
+      backdrop.setAttribute("hidden", "");
     }
   }
   function toggleMenu() {
     if (isMenuOpen()) closeMenu();
     else openMenu();
   }
-  // Toggle on trigger click — a second click of ⋯ closes the menu.
+  // Toggle on trigger click - a second click of the trigger closes the menu.
   $role("menu-toggle").addEventListener("click", (e) => {
     e.stopPropagation();
     toggleMenu();
   });
 
-  // Sandboxed iframes block confirm() — render an in-panel banner instead.
+  // Bottom sheet drag-to-dismiss: pull the sheet down past 70px to close it,
+  // release earlier and it springs back. Only downward drags move it.
+  (function attachSheetDrag() {
+    const menu = $role("menu");
+    let startY = 0, dy = 0, active = false;
+    menu.addEventListener("touchstart", (e) => {
+      if (!SHEET_MQ.matches || e.touches.length !== 1) return;
+      startY = e.touches[0].clientY;
+      dy = 0;
+      active = true;
+      menu.style.transition = "none";
+    }, { passive: true });
+    menu.addEventListener("touchmove", (e) => {
+      if (!active) return;
+      dy = Math.max(0, e.touches[0].clientY - startY);
+      if (dy > 4) {
+        e.preventDefault(); // a drag, not a tap: suppress button clicks
+        menu.style.transform = "translateY(" + dy + "px)";
+      }
+    }, { passive: false });
+    const release = () => {
+      if (!active) return;
+      active = false;
+      menu.style.transition = ""; // CSS spring takes it from here
+      menu.style.transform = "";
+      if (dy > 70) closeMenu();
+      dy = 0;
+    };
+    menu.addEventListener("touchend", release);
+    menu.addEventListener("touchcancel", release);
+  })();
+
+  // Sandboxed iframes block confirm() - render an in-panel banner instead.
   function showInlineConfirm(message, onConfirm) {
     const existing = document.getElementById("wingman-confirm");
     if (existing) existing.remove();
@@ -447,7 +732,7 @@
       } else if (action === "export") {
         // Clipboard is unavailable (ui:// is not a secure context) and Blob
         // downloads are sandbox-blocked. Send the markdown as a chat message
-        // instead — visible, copyable, no permissions needed.
+        // instead - visible, copyable, no permissions needed.
         const res = await callTool("_ui_export_markdown", { plan_name: currentPlanName });
         const md = res && (res.markdown || res.text);
         if (md) {
@@ -456,7 +741,7 @@
             setStatus("Exported to chat ✓");
             setTimeout(() => setStatus(""), 2500);
           } else {
-            setStatus("Export failed — host can't receive messages");
+            setStatus("Export failed - host can't receive messages");
           }
         } else {
           setStatus("Nothing to export");
@@ -476,7 +761,7 @@
       }
     } catch (err) {
       console.error("[wingman] menu action failed", action, err);
-      setStatus("Action failed — see console");
+      setStatus("Action failed - see console");
     }
   }
 
@@ -599,8 +884,10 @@
       animation: 160,
       ghostClass: "sortable-ghost",
       chosenClass: "sortable-chosen",
+      onStart: () => { dragging = true; },
       onEnd: async () => {
-        const ids = $$('.task-row').map((el) => Number(el.dataset.taskId));
+        dragging = false;
+        const ids = liveRows().map((el) => Number(el.dataset.taskId));
         await callTool("_ui_reorder_tasks", { plan_name: currentPlanName, ordered_ids: ids });
         await refresh();
       },
@@ -676,7 +963,7 @@
     if (params && params.isError) return;
     const payload = unwrap(params);
     if (payload && payload.plan) {
-      // Direct show_plan from Claude (not via picker click) — drop the back link.
+      // Direct show_plan from Claude (not via picker click) - drop the back link.
       cameFromPicker = false;
       render(payload);
     } else if (payload && Array.isArray(payload.plans)) {
@@ -693,12 +980,12 @@
     const SDK = window.WingmanMCP;
     if (!SDK || typeof SDK.App !== "function") {
       setStatus("MCP Apps host not detected.");
-      console.error("[wingman] WingmanMCP.App unavailable — cannot connect.");
+      console.error("[wingman] WingmanMCP.App unavailable - cannot connect.");
       return;
     }
     // Create + connect the App EXACTLY ONCE. The instance is stashed on window
     // so even a pathological re-import can't spawn a second initialize.
-    app = new SDK.App({ name: "wingman", version: "0.2.0" });
+    app = new SDK.App({ name: "wingman", version: "0.3.0" });
     window.__WINGMAN_APP__ = app;
 
     // Register listeners BEFORE connect so we don't miss the initial render data.

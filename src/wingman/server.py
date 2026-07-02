@@ -92,6 +92,7 @@ def _panel_result_meta() -> dict[str, Any]:
 def build_server() -> FastMCP:
     mcp = FastMCP(
         name="wingman",
+        icons=ui_resource.server_icons(),
         instructions=(
             "Wingman is an interactive plan/to-do panel for this conversation. "
             "Use `create_plan` to start a named plan, `add_task` / `add_tasks` to "

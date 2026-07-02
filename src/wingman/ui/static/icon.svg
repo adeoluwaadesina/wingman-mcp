@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Wingman">
+  <rect x="0.5" y="0.5" width="63" height="63" rx="14" fill="#0B111C" stroke="rgba(232,237,244,0.13)"/>
+  <g fill="#F5731F">
+    <path d="M14 15 H52 L44 23 H14 Z"/>
+    <path d="M14 27 H40 L32 35 H14 Z" opacity="0.72"/>
+    <path d="M14 39 H28 L20 47 H14 Z" opacity="0.44"/>
+  </g>
+</svg>

@@ -41,6 +41,13 @@
                "Segoe UI Variable Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --font-mono: ui-monospace, "SF Mono", SFMono-Regular, "Cascadia Code",
                "Segoe UI Mono", Menlo, Consolas, monospace;
+
+  /* Semantic z scale */
+  --z-dropdown: 10;
+  --z-sheet-backdrop: 40;
+  --z-sheet: 50;
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 html[data-theme="dark"] {
@@ -199,6 +206,7 @@ button { font-family: inherit; }
 .icon-btn:hover { background: var(--surface-3); border-color: var(--border-strong); }
 .icon-btn:active { transform: scale(0.94); }
 
+.menu-backdrop { display: none; }
 .menu {
   position: absolute;
   top: 44px;
@@ -210,7 +218,7 @@ button { font-family: inherit; }
   padding: 6px;
   min-width: 224px;
   max-width: calc(100vw - 60px);
-  z-index: 5;
+  z-index: var(--z-dropdown);
   display: flex;
   flex-direction: column;
   animation: menu-in 0.14s ease;
@@ -219,6 +227,55 @@ button { font-family: inherit; }
 @keyframes menu-in {
   from { opacity: 0; transform: scale(0.96) translateY(-4px); }
   to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+/* Phone bottom sheet: on coarse-pointer narrow screens the plan menu docks
+ * to the bottom edge with a scrim, a grab pill, and drag-to-dismiss (app.js).
+ * Narrow DESKTOP columns keep the anchored dropdown: width alone is not a
+ * phone signal, width + coarse pointer is. */
+@media (max-width: 480px) and (pointer: coarse) {
+  .menu-backdrop:not([hidden]) {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(8, 10, 16, 0.46);
+    z-index: var(--z-sheet-backdrop);
+    animation: backdrop-in 0.2s ease;
+  }
+  @keyframes backdrop-in { from { opacity: 0; } }
+  .menu {
+    position: fixed;
+    top: auto;
+    left: 0; right: 0; bottom: 0;
+    min-width: 0;
+    max-width: none;
+    border-radius: 20px 20px 0 0;
+    border-bottom: 0;
+    padding: 8px 12px calc(14px + env(safe-area-inset-bottom, 0px));
+    box-shadow: 0 -14px 44px rgba(0, 0, 0, 0.28);
+    z-index: var(--z-sheet);
+    animation: sheet-up 0.28s var(--ease-out);
+    transition: transform 0.24s var(--ease-out);
+    will-change: transform;
+    touch-action: none;
+  }
+  @keyframes sheet-up { from { transform: translateY(100%); } }
+  /* Grab pill */
+  .menu::before {
+    content: "";
+    display: block;
+    width: 42px;
+    height: 4px;
+    border-radius: 100px;
+    background: var(--border-strong);
+    margin: 4px auto 10px;
+  }
+  .menu button {
+    padding: 15px 14px;
+    font-size: 15px;
+    border-radius: 12px;
+  }
+  .menu.menu-leaving { transform: translateY(102%); transition: transform 0.2s ease-in; }
+  .menu-backdrop.menu-leaving { opacity: 0; transition: opacity 0.2s ease; }
 }
 .menu button {
   display: flex; align-items: center; gap: 11px;
@@ -454,26 +511,103 @@ button { font-family: inherit; }
 .task-list::-webkit-scrollbar { width: 8px; }
 .task-list::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 100px; }
 
+/* A row is two layers: .swipe-under (touch actions revealed by swiping) and
+ * .row-main (the visible grid content, which slides). Desktop never sees the
+ * under layer; it stays at opacity 0 until a swipe engages. */
 .task-row {
   position: relative;
+  border-radius: 10px;
+  overflow: hidden;
+  transition: background 0.13s ease;
+}
+.row-main {
+  position: relative;
+  z-index: 1;
   display: grid;
-  grid-template-columns: 20px 30px 1fr auto auto;
+  grid-template-columns: 20px 30px 1fr auto auto auto;
   align-items: center;
   gap: 8px;
   padding: 9px 8px 9px 10px;
   border-radius: 10px;
-  transition: background 0.13s ease;
+  transition: transform 0.3s var(--ease-out);
 }
-/* Status rail: a colored edge that encodes task state at a glance. */
+/* Status rail: a colored edge that encodes task state at a glance. It stays
+ * anchored while the row content slides, like a fixed instrument mark. */
 .task-row::before {
   content: "";
   position: absolute;
+  z-index: 2;
   left: 0;
   top: 7px; bottom: 7px;
   width: 3px;
   border-radius: 3px;
   background: transparent;
   transition: background 0.15s ease;
+  pointer-events: none;
+}
+.swipe-under {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-radius: 10px;
+  opacity: 0;
+  transition: opacity 0.15s ease, background 0.15s ease;
+}
+.task-row.swiping .swipe-under,
+.task-row.swipe-open .swipe-under { opacity: 1; }
+.task-row[data-swipe="right"] .swipe-under { background: var(--done-soft); }
+.task-row[data-swipe="left"]  .swipe-under { background: var(--danger-soft); }
+.su-done {
+  display: inline-flex;
+  align-items: center;
+  padding-left: 16px;
+  color: var(--done);
+  transition: transform 0.15s var(--ease-out);
+  visibility: hidden;
+}
+.task-row[data-swipe="right"] .su-done { visibility: visible; }
+.su-delete {
+  position: absolute;
+  top: 0; bottom: 0; right: 0;
+  width: 84px;
+  border: 0;
+  background: transparent;
+  color: var(--danger);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  visibility: hidden;
+  transition: transform 0.15s var(--ease-out);
+}
+.task-row[data-swipe="left"] .su-delete { visibility: visible; }
+.task-row.swipe-open .su-delete { background: var(--danger); color: #fff; }
+/* Past-threshold cue: the action icon swells slightly, a tactile "armed" tick. */
+.task-row.swipe-armed .su-done   { transform: scale(1.18); }
+.task-row.swipe-armed .su-delete { transform: scale(1.12); }
+
+/* Row lifecycle animations (diff renderer, app.js) */
+.task-row.row-enter { animation: row-in 0.28s var(--ease-out); }
+@keyframes row-in {
+  from { opacity: 0; transform: translateY(6px); }
+}
+.task-row.row-exit {
+  transition: height 0.22s ease, opacity 0.18s ease;
+  opacity: 0 !important;
+  pointer-events: none;
+}
+.task-row.just-done { animation: row-settle 0.5s ease-out; }
+@keyframes row-settle {
+  0%   { background: var(--done-soft); }
+  100% { background: transparent; }
+}
+.task-row.just-done .checkbox { animation: check-pop 0.32s var(--ease-out); }
+@keyframes check-pop {
+  0%   { transform: scale(0.82); }
+  55%  { transform: scale(1.14); }
+  100% { transform: scale(1); }
 }
 .task-row:hover { background: var(--surface-2); }
 .task-row.is-in-progress { background: var(--in-progress-soft); }
@@ -548,6 +682,17 @@ button { font-family: inherit; }
 .row-btn:hover { background: var(--surface-3); }
 .row-btn.delete:hover { color: var(--danger); background: var(--danger-soft); }
 .row-btn.run:hover    { color: var(--accent); background: var(--accent-soft); }
+.row-btn.prog:hover   { color: var(--in-progress); background: var(--in-progress-soft); }
+/* Active in-flight marker: filled state, gently pulsing beacon. */
+.task-row.is-in-progress .row-btn.prog {
+  color: var(--in-progress);
+  background: var(--in-progress-soft);
+}
+.task-row.is-in-progress .row-btn.prog svg { animation: beacon 2.4s ease-in-out infinite; }
+@keyframes beacon {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.45; }
+}
 
 /* ---------------- Empty state ---------------- */
 .empty-state {
@@ -677,30 +822,70 @@ button { font-family: inherit; }
   color: var(--text-faint);
 }
 .footer .status { color: var(--text-muted); white-space: nowrap; }
-.footer .brand { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.brand-mark {
+  flex: none;
+  color: var(--accent);
+  transform: translateY(-0.5px);
+}
+.footer .brand {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+.brand-ver {
+  text-transform: none;
+  letter-spacing: 0.04em;
+  color: var(--text-faint);
+  font-weight: 500;
+}
+.brand-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  border-radius: 100px;
+  font-size: 8px;
+  letter-spacing: 0.16em;
+  color: var(--accent);
+  line-height: 1.3;
+}
 
-/* ---------------- Mobile ---------------- */
+/* ---------------- Narrow layouts ----------------
+ * Width alone means "narrow column" (Claude desktop's side panel is <480px
+ * too). Narrow keeps compact metrics AND the boxed, scrollable task list so
+ * the panel reads as designed. Only a coarse pointer (a real touch screen)
+ * unlocks the grow-and-page-scroll behavior below. */
 @media (max-width: 480px) {
   body { padding: 8px; }
   .stage { padding: 18px 14px 12px; gap: 14px; }
   .title { font-size: 18px; }
   .progress-done { font-size: 28px; }
-  /* No nested scroll trap on phones: the list grows and the page itself
-   * scrolls, so a finger-drag anywhere just works. */
-  .task-list { max-height: none; overflow-y: visible; }
-  .task-row { padding: 10px 6px 10px 12px; gap: 6px; }
-  .menu { min-width: 216px; }
+  .row-main { padding: 10px 6px 10px 12px; gap: 6px; }
   .icon-btn { width: 42px; height: 42px; }
 }
 
 /* Touch devices: 44px-class tap targets, actions always visible, and the
- * drag handle owns its own touch gesture so reordering never fights scroll. */
-@media (hover: none) {
+ * drag handle owns its own touch gesture so reordering never fights scroll.
+ * Rows lock to pan-y so horizontal swipes belong to the row gesture (app.js)
+ * while vertical drags stay native page scroll. */
+@media (pointer: coarse) {
+  /* No nested scroll trap on touch screens: the list grows and the page
+   * itself scrolls, so a finger-drag anywhere just works. */
+  .task-list { max-height: none; overflow-y: visible; }
   .row-btn { opacity: 1; width: 42px; height: 42px; }
-  .row-btn.delete { color: var(--danger); }
-  .row-btn.run    { color: var(--accent); }
+  /* Delete moves to the swipe-left gesture on touch; dropping the button
+   * keeps rows uncluttered and the tap zones honest. */
+  .row-btn.delete { display: none; }
+  .row-btn.run  { color: var(--accent); }
+  .row-btn.prog { color: var(--text-muted); }
   .checkbox { width: 30px; height: 30px; }
-  .task-row { grid-template-columns: 26px 36px 1fr auto auto; }
+  .row-main { grid-template-columns: 26px 36px 1fr auto auto; touch-action: pan-y; }
   .task-list { gap: 5px; }
   .drag-handle { width: 26px; height: 44px; }
   .menu button { padding: 13px 12px; }
