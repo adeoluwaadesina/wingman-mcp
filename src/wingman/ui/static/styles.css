@@ -905,13 +905,16 @@ button { font-family: inherit; }
   .icon-btn { width: 42px; height: 42px; }
 }
 
-/* Touch devices: bigger tap targets, and every action button is visible (no
- * swipe-only affordances). The task list stays BOUNDED and scrolls internally,
- * same as desktop: Claude mobile sizes the panel iframe to its content, so an
- * uncapped list makes the whole panel enormous - you scroll forever and any
- * position:fixed menu ends up pinned to the bottom of that giant iframe. A
- * capped, internally-scrolling list keeps the panel a sane height. */
+/* Touch devices: bigger tap targets, every action button visible (no swipe-
+ * only affordances), and the task list GROWS instead of scrolling internally.
+ * Claude mobile sizes the panel iframe to its content, so a bounded inner list
+ * would need nested touch-scrolling, which is unreliable in the iframe ("can't
+ * slide to see tasks below"). Letting the list grow makes the whole panel one
+ * scroll surface - a finger anywhere scrolls the page, which just works. The
+ * menu is an anchored dropdown (not a position:fixed sheet), so a tall panel no
+ * longer strands it at the bottom. */
 @media (pointer: coarse) {
+  .task-list { max-height: none; overflow-y: visible; }
   .row-btn { opacity: 1; width: 38px; height: 38px; }
   .row-btn.run  { color: var(--accent); }
   .row-btn.prog { color: var(--text-muted); }

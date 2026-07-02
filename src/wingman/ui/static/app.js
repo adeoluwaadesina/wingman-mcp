@@ -928,6 +928,10 @@
       // is what showed up as "drag glitches and doesn't rearrange".
       forceFallback: COARSE.matches,
       fallbackTolerance: 4,
+      // Touch: require a brief press before a drag starts so a quick vertical
+      // swipe scrolls the page instead of being captured as a reorder.
+      delay: COARSE.matches ? 160 : 0,
+      delayOnTouchOnly: true,
       onStart: () => {
         dragging = true;
         // A row left open from a swipe carries an inline transform on .row-main;
