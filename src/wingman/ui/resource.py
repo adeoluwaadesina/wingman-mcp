@@ -1,7 +1,7 @@
 """Bundles UI static assets into a single self-contained HTML resource.
 
 MCP Apps GA (SEP-1865) uses ``text/html;profile=mcp-app`` MIME-typed resources
-rendered in a sandboxed iframe. The resource is **static and predeclared** —
+rendered in a sandboxed iframe. The resource is **static and predeclared** -
 it carries no plan data. Plan state reaches the iframe at runtime via the MCP
 Apps render-data channel (the ``toolresult`` notification carrying the calling
 tool's ``structuredContent``), per the ext-apps GA spec.
@@ -21,7 +21,7 @@ from mcp.types import Icon
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 
-# Build marker — captured once at module import (i.e. once per server-subprocess
+# Build marker - captured once at module import (i.e. once per server-subprocess
 # start). The footer of the rendered panel shows this value verbatim. If you
 # refresh the host and see the same build number after editing Python or static
 # files, the subprocess wasn't restarted (or the host is serving a cached
@@ -45,18 +45,30 @@ def _read(name: str) -> str:
     return (STATIC_DIR / name).read_text(encoding="utf-8")
 
 
-@lru_cache(maxsize=1)
-def server_icons() -> list[Icon]:
-    """The Wingman brand mark ("Manifest") as a self-contained SVG data URI.
+def icon_svg() -> str:
+    """The raw Wingman brand mark ("Manifest") SVG."""
+    return _read("icon.svg")
 
-    Declared in the MCP server's Implementation info so hosts render this in
-    place of the fallback initial next to tool calls. A data URI keeps it
-    hostless (works for the stdio server too) and inside the panel CSP.
+
+def icon_data_uri() -> str:
+    b64 = base64.b64encode(icon_svg().encode("utf-8")).decode("ascii")
+    return f"data:image/svg+xml;base64,{b64}"
+
+
+def server_icons(base_url: str | None = None) -> list[Icon]:
+    """The Wingman brand mark, declared in the MCP server's Implementation info
+    so hosts render it in place of the fallback initial next to tool calls.
+
+    When ``base_url`` is given (the hosted cloud server), the icon is referenced
+    by its public HTTPS URL - more widely supported by clients than a data URI.
+    Otherwise (the local stdio server, which has no HTTP host) it is inlined as
+    a self-contained SVG data URI.
     """
-    svg = _read("icon.svg")
-    b64 = base64.b64encode(svg.encode("utf-8")).decode("ascii")
-    data_uri = f"data:image/svg+xml;base64,{b64}"
-    return [Icon(src=data_uri, mimeType="image/svg+xml", sizes=["any"])]
+    if base_url:
+        src = base_url.rstrip("/") + "/icon.svg"
+    else:
+        src = icon_data_uri()
+    return [Icon(src=src, mimeType="image/svg+xml", sizes=["any"])]
 
 
 def _sdk_as_global() -> str:

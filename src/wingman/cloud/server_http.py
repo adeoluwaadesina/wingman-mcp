@@ -252,7 +252,14 @@ def _register_ui_tools(mcp: FastMCP, cfg: CloudConfig) -> None:
 
     @mcp.tool(name="_ui_get_run_task_prompt", meta=app_only, description="Internal: build Run-this-task prompt for sendMessage.")
     async def _ui_get_run_task_prompt(plan_name: str, task_id: int) -> dict[str, Any]:
-        text = prompts.render_run_task_prompt(plan_name, task_id)
+        # Build the prompt from Postgres. (The local prompts.render_run_task_prompt
+        # reads the on-disk SQLite db, which does not exist on the cloud server -
+        # calling it here raised and made Run-task fail with an error.)
+        plan = await _load_plan_obj(_uid(), plan_name)
+        task = next((t for t in plan.tasks if t.id == task_id), None)
+        if task is None:
+            raise store_pg.TaskNotFound(f"task {task_id} not found in plan '{plan_name}'")
+        text = prompts.RUN_TASK_PROMPT.format(plan_name=plan.name, task_content=task.content)
         try:
             await store_pg.update_task_status(_uid(), plan_name, task_id, "in_progress")
         except Exception:
@@ -294,7 +301,7 @@ def build_mcp(cfg: CloudConfig) -> FastMCP:
 
     mcp = FastMCP(
         name="wingman",
-        icons=server_icons(),
+        icons=server_icons(cfg.base_url),
         instructions=(
             "Wingman is an interactive plan/to-do panel for this conversation. "
             "Plans persist across messages and sync across your devices."
@@ -457,6 +464,17 @@ def build_app(cfg: CloudConfig, verifier, on_startup=None, userinfo_url=None) ->
     async def healthz(request):
         return JSONResponse({"ok": True})
 
+    async def icon_svg(request):
+        # Public brand mark. Hosts fetch this (unauthenticated) to show the
+        # Wingman icon next to tool calls instead of the "W" initial.
+        from starlette.responses import Response
+        from ..ui.resource import icon_svg as _icon_svg
+        return Response(
+            _icon_svg(),
+            media_type="image/svg+xml",
+            headers={"Cache-Control": "public, max-age=86400"},
+        )
+
     async def admin_stats(request):
         # Operator-only, content-free metrics. Guarded by ADMIN_TOKEN (constant
         # time compare); returns 404 when unset so the route is effectively off.
@@ -484,6 +502,7 @@ def build_app(cfg: CloudConfig, verifier, on_startup=None, userinfo_url=None) ->
     routes = [
         Route("/.well-known/oauth-protected-resource", well_known),
         Route("/healthz", healthz),
+        Route("/icon.svg", icon_svg),
         Route("/admin/stats", admin_stats),
     ]
     app = Starlette(routes=routes, lifespan=lifespan)
@@ -501,7 +520,7 @@ def build_app(cfg: CloudConfig, verifier, on_startup=None, userinfo_url=None) ->
     hardening.apply_inner(app, cfg)
     app.add_middleware(
         AuthMiddleware, verifier=verifier,
-        public_paths={"/healthz", "/.well-known/oauth-protected-resource", "/admin/stats"},
+        public_paths={"/healthz", "/icon.svg", "/.well-known/oauth-protected-resource", "/admin/stats"},
         resource_metadata_url=f"{cfg.base_url}/.well-known/oauth-protected-resource",
         userinfo_url=userinfo_url,
     )
