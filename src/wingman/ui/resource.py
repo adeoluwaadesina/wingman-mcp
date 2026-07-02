@@ -11,10 +11,13 @@ self-contained HTML string so the iframe needs zero external fetches.
 """
 from __future__ import annotations
 
+import base64
 import re
 import time
 from functools import lru_cache
 from pathlib import Path
+
+from mcp.types import Icon
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 
@@ -40,6 +43,20 @@ _SDK_EXPORT_RE = re.compile(r"export\s*\{([^}]*)\}\s*;?\s*$")
 
 def _read(name: str) -> str:
     return (STATIC_DIR / name).read_text(encoding="utf-8")
+
+
+@lru_cache(maxsize=1)
+def server_icons() -> list[Icon]:
+    """The Wingman brand mark ("Manifest") as a self-contained SVG data URI.
+
+    Declared in the MCP server's Implementation info so hosts render this in
+    place of the fallback initial next to tool calls. A data URI keeps it
+    hostless (works for the stdio server too) and inside the panel CSP.
+    """
+    svg = _read("icon.svg")
+    b64 = base64.b64encode(svg.encode("utf-8")).decode("ascii")
+    data_uri = f"data:image/svg+xml;base64,{b64}"
+    return [Icon(src=data_uri, mimeType="image/svg+xml", sizes=["any"])]
 
 
 def _sdk_as_global() -> str:

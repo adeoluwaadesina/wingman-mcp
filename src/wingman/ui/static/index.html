@@ -6,6 +6,7 @@
 <meta http-equiv="Content-Security-Policy"
       content="default-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self';">
 <title>Wingman</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230B111C'/%3E%3Cg fill='%23F5731F'%3E%3Cpath d='M14 15 H52 L44 23 H14 Z'/%3E%3Cpath d='M14 27 H40 L32 35 H14 Z' opacity='0.72'/%3E%3Cpath d='M14 39 H28 L20 47 H14 Z' opacity='0.44'/%3E%3C/g%3E%3C/svg%3E">
 <style>/*__WINGMAN_CSS__*/</style>
 </head>
 <body>
@@ -35,6 +36,7 @@
             <circle cx="19" cy="12" r="1.7" fill="currentColor"/>
           </svg>
         </button>
+        <div class="menu-backdrop" data-role="menu-backdrop" hidden></div>
         <div class="menu" data-role="menu" hidden>
           <button data-action="all-plans"><span class="mi"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M19 12H5m6-6l-6 6 6 6" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span> All plans</button>
           <div class="menu-divider"></div>
@@ -98,7 +100,7 @@
     </form>
 
     <footer class="footer">
-      <span class="brand" data-role="brand">WINGMAN &middot; MCP plan agent &middot; build <!--__WINGMAN_BUILD__--></span>
+      <span class="brand" data-role="brand"><svg class="brand-mark" viewBox="0 0 64 64" width="12" height="12" aria-hidden="true"><g fill="currentColor"><path d="M14 15 H52 L44 23 H14 Z"/><path d="M14 27 H40 L32 35 H14 Z" opacity="0.72"/><path d="M14 39 H28 L20 47 H14 Z" opacity="0.44"/></g></svg>WINGMAN <span class="brand-ver">v0.3.0</span><span class="brand-badge">Cloud</span><span hidden data-role="build-diag">WINGMAN &middot; MCP plan agent &middot; build <!--__WINGMAN_BUILD__--></span></span>
       <span class="status" data-role="status"></span>
     </footer>
   </div>

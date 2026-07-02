@@ -290,8 +290,11 @@ def build_mcp(cfg: CloudConfig) -> FastMCP:
         allowed_hosts.append(base_host)
     allowed_hosts += [h.strip() for h in os.environ.get("ALLOWED_HOSTS", "").split(",") if h.strip()]
 
+    from ..ui.resource import server_icons
+
     mcp = FastMCP(
         name="wingman",
+        icons=server_icons(),
         instructions=(
             "Wingman is an interactive plan/to-do panel for this conversation. "
             "Plans persist across messages and sync across your devices."
