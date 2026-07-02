@@ -228,55 +228,6 @@ button { font-family: inherit; }
   from { opacity: 0; transform: scale(0.96) translateY(-4px); }
   to   { opacity: 1; transform: scale(1) translateY(0); }
 }
-/* Phone bottom sheet: on coarse-pointer narrow screens the plan menu docks
- * to the bottom edge with a scrim, a grab pill, and drag-to-dismiss (app.js).
- * Narrow DESKTOP columns keep the anchored dropdown: width alone is not a
- * phone signal, width + coarse pointer is. */
-@media (max-width: 480px) and (pointer: coarse) {
-  .menu-backdrop:not([hidden]) {
-    display: block;
-    position: fixed;
-    inset: 0;
-    background: rgba(8, 10, 16, 0.46);
-    z-index: var(--z-sheet-backdrop);
-    animation: backdrop-in 0.2s ease;
-  }
-  @keyframes backdrop-in { from { opacity: 0; } }
-  .menu {
-    position: fixed;
-    top: auto;
-    left: 0; right: 0; bottom: 0;
-    min-width: 0;
-    max-width: none;
-    border-radius: 20px 20px 0 0;
-    border-bottom: 0;
-    padding: 8px 12px calc(14px + env(safe-area-inset-bottom, 0px));
-    box-shadow: 0 -14px 44px rgba(0, 0, 0, 0.28);
-    z-index: var(--z-sheet);
-    animation: sheet-up 0.28s var(--ease-out);
-    transition: transform 0.24s var(--ease-out);
-    will-change: transform;
-    touch-action: none;
-  }
-  @keyframes sheet-up { from { transform: translateY(100%); } }
-  /* Grab pill */
-  .menu::before {
-    content: "";
-    display: block;
-    width: 42px;
-    height: 4px;
-    border-radius: 100px;
-    background: var(--border-strong);
-    margin: 4px auto 10px;
-  }
-  .menu button {
-    padding: 15px 14px;
-    font-size: 15px;
-    border-radius: 12px;
-  }
-  .menu.menu-leaving { transform: translateY(102%); transition: transform 0.2s ease-in; }
-  .menu-backdrop.menu-leaving { opacity: 0; transition: opacity 0.2s ease; }
-}
 .menu button {
   display: flex; align-items: center; gap: 11px;
   padding: 10px 11px;
@@ -954,24 +905,26 @@ button { font-family: inherit; }
   .icon-btn { width: 42px; height: 42px; }
 }
 
-/* Touch devices: 44px-class tap targets, actions always visible, and the
- * drag handle owns its own touch gesture so reordering never fights scroll.
- * Rows lock to pan-y so horizontal swipes belong to the row gesture (app.js)
- * while vertical drags stay native page scroll. */
+/* Touch devices: bigger tap targets, and every action button is visible (no
+ * swipe-only affordances). The task list stays BOUNDED and scrolls internally,
+ * same as desktop: Claude mobile sizes the panel iframe to its content, so an
+ * uncapped list makes the whole panel enormous - you scroll forever and any
+ * position:fixed menu ends up pinned to the bottom of that giant iframe. A
+ * capped, internally-scrolling list keeps the panel a sane height. */
 @media (pointer: coarse) {
-  /* No nested scroll trap on touch screens: the list grows and the page
-   * itself scrolls, so a finger-drag anywhere just works. */
-  .task-list { max-height: none; overflow-y: visible; }
-  .row-btn { opacity: 1; width: 42px; height: 42px; }
-  /* Delete moves to the swipe-left gesture on touch; dropping the button
-   * keeps rows uncluttered and the tap zones honest. */
-  .row-btn.delete { display: none; }
+  .row-btn { opacity: 1; width: 38px; height: 38px; }
   .row-btn.run  { color: var(--accent); }
   .row-btn.prog { color: var(--text-muted); }
-  .checkbox { width: 30px; height: 30px; }
-  .row-main { grid-template-columns: 26px 36px 1fr auto auto; touch-action: pan-y; }
+  .checkbox { width: 28px; height: 28px; }
+  /* Six columns so the delete X stays visible alongside progress + run. */
+  .row-main {
+    grid-template-columns: 20px 32px 1fr auto auto auto;
+    gap: 4px;
+    padding: 8px 4px 8px 8px;
+    touch-action: pan-y;
+  }
   .task-list { gap: 5px; }
-  .drag-handle { width: 26px; height: 44px; }
+  .drag-handle { width: 20px; height: 44px; }
   .menu button { padding: 13px 12px; }
   .add-submit { width: 40px; height: 40px; }
 }

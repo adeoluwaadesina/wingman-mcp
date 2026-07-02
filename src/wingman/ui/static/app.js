@@ -37,7 +37,13 @@
   // or window resizing picks the right behavior without a reload.
   const REDUCED = window.matchMedia("(prefers-reduced-motion: reduce)");
   const COARSE = window.matchMedia("(pointer: coarse)");
-  const SHEET_MQ = window.matchMedia("(max-width: 480px) and (pointer: coarse)");
+  // The plan menu is an anchored dropdown on every device (the bottom-sheet
+  // variant fought Claude mobile's content-sized iframe). This stays a no-match
+  // stub so the leftover sheet code paths are inert.
+  const SHEET_MQ = { matches: false, addEventListener() {}, removeEventListener() {} };
+  // Row swipe gestures are disabled: the delete X is always visible on touch,
+  // and swipe-in-a-scroll-list fought vertical scrolling. Flip to re-enable.
+  const SWIPE_ENABLED = false;
 
   let lastChangeAt = Date.now();
   let currentPollMs = POLL_FAST_MS;
@@ -514,6 +520,7 @@
   }
 
   function attachSwipe(li) {
+    if (!SWIPE_ENABLED) return;
     const main = li.querySelector(".row-main");
     let startX = 0, startY = 0, dx = 0, axis = null, base = 0;
 
