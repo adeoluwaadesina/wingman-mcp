@@ -2,7 +2,7 @@
 
 # Wingman
 
-**An open-source MCP server that gives Claude a persistent, interactive plan panel — rendered inline in the chat.**
+**An open-source MCP server that gives your AI a persistent, interactive plan panel - rendered inline in the chat, and now synced across every device.**
 
 _Sits beside you. Doesn't fly the plane._
 
@@ -13,7 +13,7 @@ _Sits beside you. Doesn't fly the plane._
 
 <br/>
 
-![Wingman demo](https://raw.githubusercontent.com/adeoluwaadesina/wingman-mcp/main/assets/wingman-demo.gif)
+![Wingman demo](docs/assets/wingman-demo.gif)
 
 <br/>
 
@@ -25,9 +25,22 @@ _Sits beside you. Doesn't fly the plane._
 
 Long Claude conversations lose track of what you were doing, what's done, and what's next. Wingman fixes that.
 
-It gives every Claude conversation a **persistent, interactive plan panel** — rendered inline as a live UI widget. You click checkboxes. Claude ticks tasks after completing work. Either of you can add, reorder, or rename tasks at any time. The plan survives conversation restarts and lives in local SQLite on your machine.
+It gives every Claude conversation a **persistent, interactive plan panel** - rendered inline as a live UI widget. You click checkboxes. Claude ticks tasks after completing work. Either of you can add, reorder, or rename tasks at any time. The plan survives conversation restarts and lives in local SQLite on your machine.
 
-Think of it as Cursor's plan agent, generalized to any Claude conversation and any goal.
+Think of it as Cursor's plan agent, generalized to any AI conversation and any goal.
+
+<br/>
+
+---
+
+## New in v0.3
+
+- **Wingman Cloud, live.** A hosted, multi-tenant server so your plans sync across every device and assistant. Build a plan on your laptop, it is on your phone. [Connect it](#wingman-cloud-hosted-sync-across-devices) with one URL.
+- **Redesigned panel.** A "flight-ops instrument" look: signal-orange on night-navy, mono readouts, a notched progress tape, and a status rail that shows task state at a glance.
+- **In-progress status.** Mark a task as in-flight (a gently pulsing beacon), not just done or not-done. `pending -> in_progress -> done`.
+- **In-panel markdown export.** Export a plan to markdown in a copy sheet right in the panel (no chat injection, no host warnings).
+- **Mobile-optimized.** Bigger tap targets, a reachable top menu, a visible delete control, and smooth touch scrolling.
+- **A real identity.** A new Wingman brand mark ("Manifest") ships as the panel logo, the favicon, and the MCP server icon.
 
 <br/>
 
@@ -124,7 +137,7 @@ claude mcp add wingman -s user -- python -m wingman
 ```
 
 All tools work in the terminal. Instead of the clickable panel, Wingman renders a
-clean text view — a progress bar, your tasks grouped by phase, and checkboxes Claude
+clean text view - a progress bar, your tasks grouped by phase, and checkboxes Claude
 ticks as it works:
 
 ```text
@@ -137,7 +150,7 @@ _26 pending_
 [ ] 27. Build loop toggle
 ```
 
-> **Note:** The interactive panel requires a host with MCP Apps support (SEP-1865). Claude Desktop and MCPJam render it fully. Claude Code (CLI), Cursor, and VS Code Copilot Chat receive the clean text view shown above — all tools still work.
+> **Note:** The interactive panel requires a host with MCP Apps support (SEP-1865). Claude Desktop and MCPJam render it fully. Claude Code (CLI), Cursor, and VS Code Copilot Chat receive the clean text view shown above - all tools still work.
 
 <br/>
 
@@ -181,7 +194,7 @@ the clean text view is used everywhere else.
 Just describe what you're working on. Claude creates the plan and renders the panel inline:
 
 ```
-You: I want to ship Wingman this weekend — README, PyPI, GitHub, launch post.
+You: I want to ship Wingman this weekend - README, PyPI, GitHub, launch post.
      Create a plan.
 
 Claude: [calls create_plan → panel mounts with tasks already populated]
@@ -200,10 +213,12 @@ Hit **Build from our conversation →** in the panel. Claude scans your chat his
 ### 3. Work through it together
 
 - **Click a checkbox** to tick a task manually
-- **Click ▶ Run** on any task to send it back to Claude as a framed prompt — Claude works on it and ticks it when done
-- **Drag the ⋮⋮ handle** to reorder tasks as priorities shift
+- **Mark a task in-progress** to show what is in flight (a pulsing beacon), distinct from done
+- **Click ▶ Run** on any task to send it back to your assistant as a framed prompt - it works on it and ticks it when done
+- **Drag the ⋮⋮ handle** to reorder tasks as priorities shift (press and hold on touch)
 - **Click the title** to rename the plan inline
-- Tasks persist in local SQLite — survive restarts, survive new conversations
+- **Export as markdown** from the menu into an in-panel copy sheet
+- Tasks persist across restarts and new conversations (local SQLite, or Neon Postgres on Cloud)
 
 <br/>
 
@@ -215,60 +230,62 @@ Hit **Build from our conversation →** in the panel. Claude scans your chat his
 <tr>
 <td width="50%">
 
-**Empty state — ready to build**
-
-The panel mounts with a feather icon and a single CTA. One click scans your conversation and populates tasks.
-
-</td>
-<td width="50%">
-
 **Populated plan**
 
-Progress card, task list with checkboxes, drag handles, and run buttons. Always visible, never hover-only.
+The flight-ops panel: a notched progress tape, a status rail on each row, checkboxes, drag handles, and run buttons. Always visible, never hover-only.
 
 </td>
-</tr>
-<tr>
-<td>
-
-![Empty state](assets/screenshot-empty.png)
-
-</td>
-<td>
-
-![Populated plan](assets/screenshot-populated.png)
-
-</td>
-</tr>
-<tr>
 <td width="50%">
 
-**Task ticked — progress updates live**
+**Live status**
 
-Checkbox turns green, strikethrough applied, progress bar advances. State syncs via live polling across any open panels.
+Tasks check off with an animated settle; the big percent counts up; an in-flight task pulses. State syncs via live polling across any open panels.
 
 </td>
+</tr>
+<tr>
+<td>
+
+![Populated plan](docs/assets/panel-populated.png)
+
+</td>
+<td>
+
+![Live status](docs/assets/panel-in-progress.png)
+
+</td>
+</tr>
+<tr>
 <td width="50%">
 
 **3-dot menu**
 
-Rename plan, Clear completed, Build from conversation, Clear all tasks, Export as markdown, and Delete plan.
+Rename plan, Clear completed, Build from conversation, Clear all tasks, Export as markdown, and Delete plan - a reachable dropdown on every device.
+
+</td>
+<td width="50%">
+
+**Export + mobile**
+
+Export a plan to markdown in an in-panel copy sheet. On phones the panel keeps a compact header, a visible delete control, and smooth touch scrolling.
 
 </td>
 </tr>
 <tr>
 <td>
 
-![Task ticked](assets/screenshot-ticked.png)
+![Menu](docs/assets/panel-menu.png)
 
 </td>
 <td>
 
-![Menu](assets/screenshot-menu.png)
+![Export and mobile](docs/assets/panel-mobile.png)
 
 </td>
 </tr>
 </table>
+
+> Asset files live in [`docs/assets/`](docs/assets/); capture them from the explainer or the live panel per [`docs/launch/connect-walkthrough.md`](docs/launch/connect-walkthrough.md).
 
 <br/>
 
@@ -276,7 +293,7 @@ Rename plan, Clear completed, Build from conversation, Clear all tasks, Export a
 
 ## Tool reference
 
-Wingman exposes 12 tools to Claude. You don't call these directly — just describe what you want and Claude picks the right one.
+Wingman exposes 12 tools to Claude. You don't call these directly - just describe what you want and Claude picks the right one.
 
 | Tool                 | What it does                                               |
 | -------------------- | ---------------------------------------------------------- |
@@ -293,7 +310,7 @@ Wingman exposes 12 tools to Claude. You don't call these directly — just descr
 | `list_plans`         | List all plans with task counts                            |
 | `delete_plan`        | Delete a plan and all its tasks                            |
 
-There are also 14 internal `_ui_*` tools used by the panel itself — hidden from Claude, not part of the public API.
+There are also 14 internal `_ui_*` tools used by the panel itself - hidden from Claude, not part of the public API.
 
 <br/>
 
@@ -307,7 +324,7 @@ Wingman is available as a composable skill for AI agents via [skills.sh](https:/
 npx skills add adeoluwaadesina/wingman-mcp
 ```
 
-Once installed, any MCP-compatible agent can call Wingman's plan management tools as coordination primitives across a multi-step workflow — create plans, track task state, and tick tasks on completion, all from within an orchestrated agent pipeline.
+Once installed, any MCP-compatible agent can call Wingman's plan management tools as coordination primitives across a multi-step workflow - create plans, track task state, and tick tasks on completion, all from within an orchestrated agent pipeline.
 
 <br/>
 
@@ -346,12 +363,12 @@ Once installed, any MCP-compatible agent can call Wingman's plan management tool
 
 ## Security & privacy
 
-- **No telemetry. No phone-home. No network calls anywhere.** Wingman is a local state-tracking server. Zero outbound connections on any tool path — audited and tested.
+- **No telemetry. No phone-home. No network calls anywhere.** Wingman is a local state-tracking server. Zero outbound connections on any tool path - audited and tested.
 - **Local-only by default.** stdio transport. Your plans live on your machine.
 - **Local vs Cloud.** The no-telemetry guarantee above covers the local `pip install` product, which stays zero-network. The forthcoming hosted **Wingman Cloud** service (in active development) is a separate, opt-in deployment: it stores plans in Postgres (Neon) and uses server-side analytics (Sentry, PostHog) purely to operate the service. It never logs plan or task content. Using the local install never touches any of that.
 - **Sandboxed UI.** The panel runs in a host-sandboxed iframe with a strict CSP (`connect-src 'self'`). No cross-origin access.
 - **Parameterized SQL throughout.** No string-built queries. Validated via full test suite.
-- **Path-traversal safe.** Plan names are allow-list validated — letters, digits, space, hyphen, underscore, apostrophe, period, colon, parentheses. Slashes, backslashes, `..` sequences, null bytes, newlines, and tabs are blocked.
+- **Path-traversal safe.** Plan names are allow-list validated - letters, digits, space, hyphen, underscore, apostrophe, period, colon, parentheses. Slashes, backslashes, `..` sequences, null bytes, newlines, and tabs are blocked.
 
 <br/>
 
@@ -374,10 +391,11 @@ Once installed, any MCP-compatible agent can call Wingman's plan management tool
 
 ---
 
-## Known limitations in v0.2
+## Known limitations in v0.3
 
-- **Live polling** runs every 2.5s (10s after 30s idle). Server-pushed updates via MCP notifications are v0.3.
-- **Mobile Claude** (claude.ai mobile) requires a hosted HTTP/SSE server. Local stdio can't reach mobile clients. Wingman Cloud addresses this.
+- **Live polling** runs every 2.5s (10s after 30s idle). Server-pushed updates via MCP notifications are still on the list.
+- **Cold start on Cloud.** The hosted service runs on a free tier that sleeps when idle; the first request after a lull takes a few seconds to wake it, then it is fast.
+- **Server icon rendering** depends on the host. Wingman advertises its brand mark in the MCP server identity; whether a client shows it next to tool calls (vs a "W" initial) is up to that client.
 
 <br/>
 
@@ -385,13 +403,19 @@ Once installed, any MCP-compatible agent can call Wingman's plan management tool
 
 ## Roadmap
 
-### Wingman Cloud — next
+### Wingman Cloud - shipped ✓
 
-HTTP/SSE transport · OAuth 2.1 · Postgres with user scoping · Render / Railway hosting · mobile Claude support · cross-device plan access
+Streamable-HTTP transport · OAuth 2.1 resource server (WorkOS AuthKit) · multi-tenant Postgres (Neon) with per-user scoping · Render hosting · mobile + cross-device sync · content-free operator metrics. Run it yourself with `wingman-cloud` once the env vars in `.env.example` are set, or use the hosted instance above.
 
-The Foundation (multi-tenant Postgres storage, OAuth 2.1 resource-server auth, transport hardening) is in active development. Run it locally with `wingman-cloud` once the required env vars (see `.env.example`) are set.
+### Next
 
-### v0.2 — shipped ✓
+Server-pushed updates (MCP notifications instead of polling) · keep-warm ping · Wingman Wrapped (a year-in-review from content-free metrics) · richer status filters.
+
+### v0.3 - shipped ✓
+
+Wingman Cloud (hosted sync) · redesigned flight-ops panel · in-progress task status · in-panel markdown export · mobile-optimized layout · Wingman brand mark (panel logo, favicon, MCP server icon).
+
+### v0.2 - shipped ✓
 
 Plan picker (`show_plans`) · full menu actions (clear all, export, delete) · per-plan task numbering · wider plan-name support (`'.:()`) · smarter polling backoff · "Build from conversation" in 3-dot menu
 
@@ -405,10 +429,10 @@ Plan picker (`show_plans`) · full menu actions (clear all, export, delete) · p
 The served HTML is cached in memory for the subprocess lifetime. Restart Claude Desktop fully (quit from tray, don't just close the window) after any change to `ui/static/*`. Hard-refresh the host webview (Ctrl+Shift+R in MCPJam) after restart. The build timestamp in the panel footer confirms which build is live.
 
 **Tools don't appear after config change:**
-Quit Claude Desktop fully — closing the window leaves the MCP subprocess running with the old config.
+Quit Claude Desktop fully - closing the window leaves the MCP subprocess running with the old config.
 
 **`wingman --help` shows an MCP protocol error:**
-Expected. Wingman is an MCP server, not a CLI tool. It speaks JSON-RPC over stdio — running it directly in a terminal produces a protocol handshake error. Use it via your MCP host config.
+Expected. Wingman is an MCP server, not a CLI tool. It speaks JSON-RPC over stdio - running it directly in a terminal produces a protocol handshake error. Use it via your MCP host config.
 
 <br/>
 
@@ -416,7 +440,7 @@ Expected. Wingman is an MCP server, not a CLI tool. It speaks JSON-RPC over stdi
 
 ## Contributing
 
-Issues, PRs, and feedback welcome. This is v0.2 — rough edges exist and are documented above.
+Issues, PRs, and feedback welcome. This is v0.3 - rough edges exist and are documented above.
 
 If you hit a host-specific rendering quirk (especially on Cursor or VS Code Copilot Chat), open an issue with your host version and what you observed. Host-side MCP Apps behavior varies and real-world reports are the fastest way to track it.
 
@@ -426,7 +450,7 @@ If you hit a host-specific rendering quirk (especially on Cursor or VS Code Copi
 
 ## License
 
-MIT — © 2026 Adeolu Adesina
+MIT - © 2026 Adeolu Adesina
 
 ---
 
