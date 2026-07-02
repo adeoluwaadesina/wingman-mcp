@@ -196,7 +196,10 @@
       $role("p-done").textContent = String(done);
       $role("p-total").textContent = "of " + total;
       $role("p-pct").textContent = String(pct);
-      $role("p-fill").style.width = pct + "%";
+      // The fill scales (compositor-only) instead of animating width; the
+      // track draws one notch per task via --segs.
+      $role("p-fill").style.transform = "scaleX(" + pct / 100 + ")";
+      progress.style.setProperty("--segs", String(total));
       $role("pill-done").textContent = String(done);
       $role("pill-progress").textContent = String(inProg);
       $role("pill-pending").textContent = String(pending);
@@ -295,7 +298,13 @@
 
     const pos = t.position || t.id;
     li.innerHTML = `
-      <span class="drag-handle" aria-hidden="true">&#x2807;&#x2807;</span>
+      <span class="drag-handle" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+          <circle cx="9" cy="6" r="1.6" fill="currentColor"/><circle cx="15" cy="6" r="1.6" fill="currentColor"/>
+          <circle cx="9" cy="12" r="1.6" fill="currentColor"/><circle cx="15" cy="12" r="1.6" fill="currentColor"/>
+          <circle cx="9" cy="18" r="1.6" fill="currentColor"/><circle cx="15" cy="18" r="1.6" fill="currentColor"/>
+        </svg>
+      </span>
       <button class="checkbox" role="checkbox" aria-checked="${t.status === "done"}" aria-label="Toggle task ${pos} done">
         <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
           <path d="M5 12l4 4 10-10" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>

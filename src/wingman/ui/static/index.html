@@ -36,15 +36,15 @@
           </svg>
         </button>
         <div class="menu" data-role="menu" hidden>
-          <button data-action="all-plans"><span class="mi">&#8592;</span> All plans</button>
+          <button data-action="all-plans"><span class="mi"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M19 12H5m6-6l-6 6 6 6" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span> All plans</button>
           <div class="menu-divider"></div>
-          <button data-action="rename"><span class="mi">&#9998;</span> Rename plan</button>
-          <button data-action="clear-completed"><span class="mi">&#9003;</span> Clear completed</button>
-          <button data-action="build-from-chat"><span class="mi">&#128172;</span> Build from conversation</button>
-          <button data-action="clear-all"><span class="mi">&#128465;</span> Clear all tasks</button>
-          <button data-action="export"><span class="mi">&#128229;</span> Export as markdown</button>
+          <button data-action="rename"><span class="mi"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17zM13.5 7.5l3 3" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span> Rename plan</button>
+          <button data-action="clear-completed"><span class="mi"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="1.8" fill="none"/><path d="M8.5 12l2.4 2.4L15.5 9.8" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span> Clear completed</button>
+          <button data-action="build-from-chat"><span class="mi"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M21 11.5a7.8 7.8 0 0 1-8.2 7.7 8.9 8.9 0 0 1-3.5-.7L4 20l1.6-4.3a7.4 7.4 0 0 1-1.1-4.2A7.8 7.8 0 0 1 12.7 3.8 7.8 7.8 0 0 1 21 11.5z" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span> Build from conversation</button>
+          <button data-action="clear-all"><span class="mi"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><rect x="4.5" y="4.5" width="15" height="15" rx="3.5" stroke="currentColor" stroke-width="1.8" fill="none"/><path d="M9.5 9.5l5 5m0-5l-5 5" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round"/></svg></span> Clear all tasks</button>
+          <button data-action="export"><span class="mi"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M12 15V4m0 0L8 8m4-4l4 4M5 15v3a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span> Export as markdown</button>
           <div class="menu-divider"></div>
-          <button data-action="delete-plan" class="danger"><span class="mi">&#128465;</span> Delete plan</button>
+          <button data-action="delete-plan" class="danger"><span class="mi"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M4.5 6.5h15m-11 0V5a1.5 1.5 0 0 1 1.5-1.5h4A1.5 1.5 0 0 1 15.5 5v1.5m-9 0l1 12A1.8 1.8 0 0 0 9.3 20.5h5.4a1.8 1.8 0 0 0 1.8-1.7l1-12.3" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span> Delete plan</button>
         </div>
       </div>
     </header>
@@ -73,14 +73,14 @@
 
     <section class="empty-state" data-role="empty" hidden>
       <div class="empty-icon">
-        <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
-          <path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z M16 8L2 22 M17.5 15H9"
-                stroke="currentColor" stroke-width="1.6" fill="none"
+        <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true">
+          <path d="M21 4L3 11.5l6.5 2.5L12 20l3-5.5L21 4z M9.5 14L21 4"
+                stroke="currentColor" stroke-width="1.7" fill="none"
                 stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
       </div>
-      <h2 class="empty-title">Nothing here yet</h2>
-      <p class="empty-text">Wingman keeps a plan you and Claude can both edit during this conversation. Ask Claude to add tasks, or type one below to begin.</p>
+      <h2 class="empty-title">Clear runway</h2>
+      <p class="empty-text">No tasks on this plan yet. Wingman keeps a shared checklist you and Claude both edit as you work. Ask Claude for tasks, or add one below.</p>
       <button class="primary-btn" data-action="build-from-chat">Build from our conversation &rarr;</button>
       <div class="empty-divider"><span>or type below</span></div>
     </section>
