@@ -358,6 +358,83 @@ button { font-family: inherit; }
 }
 .confirm-no:hover { background: var(--surface-2); }
 
+/* ---------------- Export sheet ---------------- */
+.export-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  background: rgba(4, 8, 14, 0.55);
+  animation: backdrop-in 0.16s ease;
+}
+.export-panel {
+  width: 100%;
+  max-width: 440px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 14px;
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+}
+.export-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.export-title {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.export-close {
+  background: transparent; border: 0; color: var(--text-faint);
+  cursor: pointer; display: inline-flex; padding: 4px; border-radius: 8px;
+}
+.export-close:hover { color: var(--text); background: var(--surface-2); }
+.export-text {
+  flex: 1;
+  min-height: 180px;
+  margin: 0;
+  padding: 12px 14px;
+  border: 0;
+  resize: none;
+  background: var(--surface-2);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre;
+  overflow: auto;
+}
+.export-text:focus { outline: none; }
+.export-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding: 10px 14px;
+  border-top: 1px solid var(--border);
+}
+.export-copy {
+  background: var(--accent);
+  color: var(--accent-ink);
+  border: 0;
+  border-radius: 9px;
+  padding: 8px 18px;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+}
+.export-copy:hover { filter: brightness(1.08); }
+
 /* ---------------- Plan picker ---------------- */
 .picker-section { padding: 2px 0; }
 .picker-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
@@ -519,6 +596,13 @@ button { font-family: inherit; }
   border-radius: 10px;
   overflow: hidden;
   transition: background 0.13s ease;
+  /* The list is a flex column with a capped max-height. Without this, once the
+   * rows overflow that cap the flex algorithm SHRINKS them to fit instead of
+   * scrolling - and because the row sets overflow:hidden, its min-height:auto
+   * resolves to 0, so rows collapse to a few px and the content is clipped
+   * (looks invisible). flex-shrink:0 keeps each row at its content height and
+   * lets the list scroll as intended. */
+  flex-shrink: 0;
 }
 .row-main {
   position: relative;

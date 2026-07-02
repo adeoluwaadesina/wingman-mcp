@@ -704,6 +704,46 @@
     stage.insertBefore(bar, $role("add-form"));
   }
 
+  // Export: markdown shown in-panel in a selectable field with a Copy button.
+  function showExportSheet(md) {
+    const existing = document.getElementById("wingman-export");
+    if (existing) existing.remove();
+    const wrap = document.createElement("div");
+    wrap.id = "wingman-export";
+    wrap.className = "export-sheet";
+    wrap.innerHTML = `
+      <div class="export-panel">
+        <div class="export-head">
+          <span class="export-title">Export as markdown</span>
+          <button class="export-close" aria-label="Close">
+            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
+          </button>
+        </div>
+        <textarea class="export-text" readonly spellcheck="false"></textarea>
+        <div class="export-actions">
+          <button class="export-copy">Copy</button>
+        </div>
+      </div>
+    `;
+    const ta = wrap.querySelector(".export-text");
+    ta.value = md;
+    const close = () => wrap.remove();
+    wrap.querySelector(".export-close").addEventListener("click", close);
+    wrap.addEventListener("click", (e) => { if (e.target === wrap) close(); });
+    const copyBtn = wrap.querySelector(".export-copy");
+    copyBtn.addEventListener("click", () => {
+      ta.focus();
+      ta.select();
+      let ok = false;
+      try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+      copyBtn.textContent = ok ? "Copied ✓" : "Press Ctrl/Cmd+C";
+      setTimeout(() => { copyBtn.textContent = "Copy"; }, 1800);
+    });
+    stage.appendChild(wrap);
+    ta.focus();
+    ta.select(); // pre-selected so a manual copy works even if execCommand is blocked
+  }
+
   async function handleMenuAction(action) {
     closeMenu();
     try {
@@ -730,22 +770,14 @@
           await refresh();
         });
       } else if (action === "export") {
-        // Clipboard is unavailable (ui:// is not a secure context) and Blob
-        // downloads are sandbox-blocked. Send the markdown as a chat message
-        // instead - visible, copyable, no permissions needed.
+        // Show the markdown in-panel to copy. Sending it into the chat composer
+        // trips the host's "content may contain malicious instructions" guard,
+        // which alarms users; an in-panel copy avoids that and needs no
+        // clipboard permission (execCommand + manual select fallback).
         const res = await callTool("_ui_export_markdown", { plan_name: currentPlanName });
         const md = res && (res.markdown || res.text);
-        if (md) {
-          const sent = await sendChatMessage(md);
-          if (sent) {
-            setStatus("Exported to chat ✓");
-            setTimeout(() => setStatus(""), 2500);
-          } else {
-            setStatus("Export failed - host can't receive messages");
-          }
-        } else {
-          setStatus("Nothing to export");
-        }
+        if (md) showExportSheet(md);
+        else setStatus("Nothing to export");
       } else if (action === "delete-plan") {
         showInlineConfirm("Delete this entire plan? This cannot be undone.", async () => {
           const res = await callTool("_ui_delete_plan", { plan_name: currentPlanName });
@@ -884,11 +916,33 @@
       animation: 160,
       ghostClass: "sortable-ghost",
       chosenClass: "sortable-chosen",
-      onStart: () => { dragging = true; },
+      // Touch screens: use Sortable's JS fallback drag. Native HTML5 drag-and-
+      // drop is unreliable on mobile (jumpy, drops that don't register), which
+      // is what showed up as "drag glitches and doesn't rearrange".
+      forceFallback: COARSE.matches,
+      fallbackTolerance: 4,
+      onStart: () => {
+        dragging = true;
+        // A row left open from a swipe carries an inline transform on .row-main;
+        // clear every open swipe so the dragged row isn't visually offset.
+        if (openSwipeRow) closeSwipe(openSwipeRow);
+        liveRows().forEach((el) => {
+          const m = el.querySelector(".row-main");
+          if (m) { m.style.transform = ""; m.style.transition = ""; }
+        });
+      },
       onEnd: async () => {
         dragging = false;
-        const ids = liveRows().map((el) => Number(el.dataset.taskId));
-        await callTool("_ui_reorder_tasks", { plan_name: currentPlanName, ordered_ids: ids });
+        const ids = liveRows()
+          .map((el) => Number(el.dataset.taskId))
+          .filter((n) => Number.isFinite(n));
+        // Reorder requires the complete set of ids exactly once; a partial or
+        // duplicated list is rejected server-side and would just bounce back.
+        // Only write when it is a clean, complete permutation.
+        const expected = state.plan && state.plan.tasks ? state.plan.tasks.length : ids.length;
+        if (ids.length === expected && new Set(ids).size === ids.length) {
+          await callTool("_ui_reorder_tasks", { plan_name: currentPlanName, ordered_ids: ids });
+        }
         await refresh();
       },
     });
