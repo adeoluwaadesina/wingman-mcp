@@ -1,0 +1,735 @@
+<title>Wingman - Product Explainer</title>
+<style>
+  :root{
+    --orange:#F5731F; --orange2:#FF9A4D;
+    --navy:#0E1420; --navy2:#0B111C; --ink:#070B12;
+    --text:#E8EDF4; --mut:#8B95A7; --faint:#5A6478;
+    --green:#3FB950; --amber:#E3A008;
+    --sans:-apple-system,"Segoe UI",system-ui,sans-serif;
+    --mono:ui-monospace,"Cascadia Code","SF Mono",Consolas,monospace;
+    --ease-out:cubic-bezier(.23,1,.32,1);
+    --ease-io:cubic-bezier(.645,.045,.355,1);
+  }
+  html,body{height:100%;}
+  body{
+    margin:0; background:var(--ink); color:var(--text);
+    font-family:var(--sans); overflow:hidden;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .viewport{display:flex; flex-direction:column; align-items:center; gap:14px;}
+  .stage-slot{position:relative;}
+  /* ============ STAGE ============ */
+  .stage{
+    width:1120px; height:630px; position:absolute; top:0; left:0;
+    transform-origin:top left;
+    background:
+      radial-gradient(120% 90% at 50% 0%, rgba(245,115,31,.045), transparent 55%),
+      repeating-linear-gradient(180deg, rgba(232,237,244,.016) 0 1px, transparent 1px 44px),
+      var(--navy2);
+    overflow:hidden; border-radius:6px;
+    box-shadow:0 0 0 1px rgba(232,237,244,.06), 0 30px 80px rgba(0,0,0,.6);
+  }
+  .stage::after{ /* vignette */
+    content:""; position:absolute; inset:0; pointer-events:none;
+    background:radial-gradient(130% 110% at 50% 45%, transparent 60%, rgba(7,11,18,.55) 100%);
+  }
+  /* instrument frame: corner ticks + HUD labels */
+  .cornt{position:absolute; width:16px; height:16px; z-index:5; opacity:.7;}
+  .cornt::before,.cornt::after{content:""; position:absolute; background:var(--orange);}
+  .cornt::before{width:16px; height:1px;} .cornt::after{width:1px; height:16px;}
+  .c-tl{top:18px; left:18px;} .c-tr{top:18px; right:18px; transform:scaleX(-1);}
+  .c-bl{bottom:18px; left:18px; transform:scaleY(-1);} .c-br{bottom:18px; right:18px; transform:scale(-1);}
+  .hud{
+    position:absolute; z-index:5; font-family:var(--mono); font-size:11px;
+    letter-spacing:.14em; color:var(--faint);
+  }
+  .hud-l{top:22px; left:46px;} .hud-r{top:22px; right:46px; color:var(--mut);}
+  .hud-r b{color:var(--orange); font-weight:400;}
+  /* ============ SCENES ============ */
+  .scene{
+    position:absolute; inset:0; display:flex; flex-direction:column;
+    align-items:center; justify-content:center;
+    opacity:0; visibility:hidden; z-index:1;
+    transition:opacity .75s var(--ease-io), visibility 0s linear .75s;
+  }
+  .scene.on{opacity:1; visibility:visible; z-index:2; transition:opacity .75s var(--ease-io);}
+  .caption{
+    position:absolute; bottom:44px; left:0; right:0; text-align:center;
+    font-size:19px; color:var(--mut); letter-spacing:.01em;
+    opacity:0; transform:translateY(10px);
+  }
+  .on .caption{animation:rise .8s var(--ease-out) 1.1s forwards;}
+  @keyframes rise{to{opacity:1; transform:translateY(0);}}
+  @keyframes fadein{to{opacity:1;}}
+
+  /* ---------- SCENE 1 : BRAND OPEN ---------- */
+  .brandlock{display:flex; align-items:center; gap:34px;}
+  .mark{width:150px; height:150px; overflow:visible;}
+  .mark .bar{transform:scaleX(0); transform-origin:14px 50%;}
+  .on .mark .b1{animation:sweep .7s var(--ease-out) .25s forwards;}
+  .on .mark .b2{animation:sweep .7s var(--ease-out) .45s forwards;}
+  .on .mark .b3{animation:sweep .7s var(--ease-out) .65s forwards;}
+  @keyframes sweep{to{transform:scaleX(1);}}
+  .on .mark{animation:markglow 2.2s var(--ease-io) 1.2s forwards;}
+  @keyframes markglow{
+    0%{filter:drop-shadow(0 0 0 rgba(245,115,31,0));}
+    45%{filter:drop-shadow(0 0 26px rgba(245,115,31,.55));}
+    100%{filter:drop-shadow(0 0 14px rgba(245,115,31,.3));}
+  }
+  .wordmark{
+    font-size:78px; font-weight:700; letter-spacing:.34em; line-height:1;
+    text-indent:.34em; /* balance tracking */
+    opacity:0; transform:translateX(-14px); filter:blur(6px);
+  }
+  .on .wordmark{animation:resolve 1s var(--ease-out) .95s forwards;}
+  @keyframes resolve{to{opacity:1; transform:translateX(0); filter:blur(0);}}
+  .tagline{
+    margin-top:30px; font-size:24px; color:var(--mut); letter-spacing:.02em;
+    opacity:0;
+  }
+  .on .tagline{animation:fadein .9s var(--ease-io) 2s forwards;}
+  .tagline em{color:var(--orange2); font-style:normal;}
+  .verline{
+    margin-top:22px; font-family:var(--mono); font-size:12px;
+    letter-spacing:.22em; color:var(--faint); opacity:0;
+  }
+  .on .verline{animation:fadein .9s var(--ease-io) 2.7s forwards;}
+
+  /* ---------- PANEL (scenes 2 + 3) ---------- */
+  .panel{
+    width:620px; background:var(--navy); border:1px solid rgba(232,237,244,.09);
+    border-radius:14px; padding:26px 28px 22px;
+    box-shadow:0 24px 60px rgba(0,0,0,.5), 0 0 0 1px rgba(7,11,18,.6);
+  }
+  .s2 .panel{opacity:0; transform:translateY(26px) scale(.965);}
+  .s2.on .panel{animation:panelin .9s var(--ease-out) .15s forwards;}
+  @keyframes panelin{to{opacity:1; transform:translateY(0) scale(1);}}
+  .phead{display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:18px;}
+  .phead-l{display:flex; gap:14px; align-items:center;}
+  .minimark{width:34px; height:34px; flex:none;}
+  .ptitle{font-size:23px; font-weight:650; letter-spacing:.01em; line-height:1.15;}
+  .psub{font-family:var(--mono); font-size:12px; color:var(--mut); letter-spacing:.12em; margin-top:5px;}
+  .phead-r{text-align:right;}
+  .pct{font-family:var(--mono); font-size:34px; color:var(--orange); line-height:1; font-weight:500;}
+  .donepill{
+    display:inline-block; margin-top:7px; font-family:var(--mono); font-size:10.5px;
+    letter-spacing:.16em; color:var(--mut);
+    border:1px solid rgba(232,237,244,.14); border-radius:99px; padding:3px 10px;
+  }
+  .donepill.hasdone{color:var(--green); border-color:rgba(63,185,80,.4);}
+  /* notched progress tape */
+  .tape{position:relative; height:12px; border-radius:3px; overflow:hidden;
+    background:rgba(232,237,244,.06); margin-bottom:20px;}
+  .tape-fill{position:absolute; inset:0;
+    background:linear-gradient(90deg, var(--orange), var(--orange2));
+    transform:scaleX(0); transform-origin:left;
+    transition:transform .7s var(--ease-io);}
+  .tape-notch{position:absolute; inset:0; pointer-events:none;
+    background:repeating-linear-gradient(90deg, transparent 0 16px, var(--navy) 16px 19px);}
+  /* task rows */
+  .tasks{display:flex; flex-direction:column; gap:8px;}
+  .trow{
+    position:relative; display:flex; align-items:center; gap:14px;
+    background:rgba(232,237,244,.035); border:1px solid rgba(232,237,244,.06);
+    border-radius:9px; padding:12px 16px 12px 20px; font-size:17.5px;
+    transition:background .5s, border-color .5s;
+  }
+  .trow .rail{position:absolute; left:0; top:8px; bottom:8px; width:3px; border-radius:3px;
+    background:var(--faint); opacity:.55; transition:background .5s, opacity .5s;}
+  .s2 .trow{opacity:0; transform:translateY(12px);}
+  .s2.on .trow{animation:rise .55s var(--ease-out) forwards;}
+  .s2.on .trow:nth-child(1){animation-delay:1.0s;}
+  .s2.on .trow:nth-child(2){animation-delay:1.18s;}
+  .s2.on .trow:nth-child(3){animation-delay:1.36s;}
+  .s2.on .trow:nth-child(4){animation-delay:1.54s;}
+  .cb{
+    width:21px; height:21px; flex:none; border-radius:6px;
+    border:1.5px solid var(--faint); display:grid; place-items:center;
+    transition:border-color .35s, background .35s;
+  }
+  .cb svg{width:13px; height:13px; overflow:visible;}
+  .cb path{fill:none; stroke:var(--ink); stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round;
+    stroke-dasharray:14; stroke-dashoffset:14;}
+  .ttext{position:relative; color:var(--text); transition:color .5s;}
+  .ttext .strike{position:absolute; left:-2px; top:52%; height:1.5px; width:calc(100% + 4px);
+    background:var(--faint); transform:scaleX(0); transform-origin:left;
+    transition:transform .45s var(--ease-io) .1s;}
+  .trow.done{background:rgba(63,185,80,.05); border-color:rgba(63,185,80,.16);}
+  .trow.done .rail{background:var(--green); opacity:.9;}
+  .trow.done .cb{background:var(--green); border-color:var(--green);}
+  .trow.done .cb path{animation:tick .35s var(--ease-out) .12s forwards;}
+  @keyframes tick{to{stroke-dashoffset:0;}}
+  .trow.done .ttext{color:var(--faint);}
+  .trow.done .ttext .strike{width:calc(100% + 4px);}
+  .trow.prog{border-color:rgba(227,160,8,.3); background:rgba(227,160,8,.05);}
+  .trow.prog .rail{background:var(--amber); opacity:1;}
+  .flight{
+    display:none; margin-left:auto; align-items:center; gap:8px;
+    font-family:var(--mono); font-size:10px; letter-spacing:.18em; color:var(--amber);
+  }
+  .trow.prog .flight{display:flex;}
+  .beacon{width:7px; height:7px; border-radius:50%; background:var(--amber);
+    animation:beacon 1.4s var(--ease-io) infinite;}
+  @keyframes beacon{
+    0%,100%{box-shadow:0 0 0 0 rgba(227,160,8,.5); opacity:1;}
+    50%{box-shadow:0 0 0 7px rgba(227,160,8,0); opacity:.65;}
+  }
+  /* compose line (scene 3 typing) */
+  .compose{
+    display:flex; align-items:center; gap:12px; margin-top:10px;
+    border:1px dashed rgba(245,115,31,.45); border-radius:9px;
+    padding:11px 16px; font-size:17px; color:var(--text);
+    opacity:0; transform:translateY(6px);
+    transition:opacity .4s var(--ease-out), transform .4s var(--ease-out);
+  }
+  .compose.show{opacity:1; transform:translateY(0);}
+  .compose.gone{opacity:0; transform:translateY(-6px);}
+  .compose .plus{color:var(--orange); font-family:var(--mono); font-size:18px;}
+  .caret{display:inline-block; width:2px; height:19px; background:var(--orange);
+    vertical-align:-3px; margin-left:1px; animation:blink .9s steps(1) infinite;}
+  @keyframes blink{50%{opacity:0;}}
+  .trow.newrow{opacity:0; transform:translateY(-10px) scale(.98);
+    transition:opacity .5s var(--ease-out), transform .5s var(--ease-out);}
+  .trow.newrow.landed{opacity:1; transform:translateY(0) scale(1);}
+
+  /* ---------- SCENE 4 : SYNC ---------- */
+  .s4 .headline{font-size:38px; font-weight:700; letter-spacing:.01em; margin-bottom:44px;
+    opacity:0; transform:translateY(12px);}
+  .s4.on .headline{animation:rise .8s var(--ease-out) .3s forwards;}
+  .syncrow{display:flex; align-items:center; gap:0; position:relative;}
+  .device{opacity:0; transform:translateY(18px);}
+  .s4.on .device.laptop{animation:rise .8s var(--ease-out) .55s forwards;}
+  .s4.on .device.phone{animation:rise .8s var(--ease-out) .75s forwards;}
+  .laptop .lscreen{
+    width:400px; background:var(--navy); border:1px solid rgba(232,237,244,.12);
+    border-radius:12px 12px 4px 4px; padding:16px 18px 14px;
+  }
+  .laptop .lbase{width:460px; height:11px; margin:0 auto;
+    background:linear-gradient(180deg, #1a2333, #0d1320);
+    border-radius:0 0 10px 10px; margin-left:-30px;
+    border:1px solid rgba(232,237,244,.1); border-top:none;}
+  .phone{
+    width:186px; background:var(--navy); border:1px solid rgba(232,237,244,.12);
+    border-radius:22px; padding:14px 12px 16px; position:relative;
+  }
+  .phone::before{content:""; position:absolute; top:7px; left:50%; transform:translateX(-50%);
+    width:52px; height:5px; border-radius:99px; background:rgba(232,237,244,.14);}
+  .phone .mini{margin-top:10px;}
+  .mini .mhead{display:flex; align-items:center; gap:8px; margin-bottom:10px;}
+  .mini .mhead svg{width:16px; height:16px; flex:none;}
+  .mini .mtitle{font-size:12.5px; font-weight:650;}
+  .mini .mtape{position:relative; height:6px; border-radius:2px; overflow:hidden;
+    background:rgba(232,237,244,.07); margin-bottom:10px;}
+  .mini .mtape .tape-fill{transition:transform .6s var(--ease-io);}
+  .mini .mtape .tape-notch{background:repeating-linear-gradient(90deg, transparent 0 9px, var(--navy) 9px 11px);}
+  .mrow{display:flex; align-items:center; gap:8px; font-size:12px; padding:6px 8px;
+    border-radius:6px; background:rgba(232,237,244,.035); margin-bottom:5px;
+    transition:background .4s;}
+  .mrow .mcb{width:13px; height:13px; border-radius:4px; border:1.2px solid var(--faint);
+    flex:none; display:grid; place-items:center; transition:background .3s, border-color .3s;}
+  .mrow .mcb svg{width:8px; height:8px;}
+  .mrow .mcb path{fill:none; stroke:var(--ink); stroke-width:2; stroke-linecap:round;
+    stroke-linejoin:round; stroke-dasharray:14; stroke-dashoffset:14;}
+  .mrow.done{background:rgba(63,185,80,.06);}
+  .mrow.done .mcb{background:var(--green); border-color:var(--green);}
+  .mrow.done .mcb path{animation:tick .3s var(--ease-out) .1s forwards;}
+  .mrow.done .mtx{color:var(--faint); text-decoration:line-through;
+    text-decoration-color:var(--faint); text-decoration-thickness:1px;}
+  .mrow .mtx{transition:color .4s;}
+  /* sync link */
+  .synclink{width:230px; position:relative; height:120px; flex:none; margin:0 6px;
+    opacity:0;}
+  .s4.on .synclink{animation:fadein .8s var(--ease-io) 1.1s forwards;}
+  .synclink svg.arc{position:absolute; inset:0; width:100%; height:100%; overflow:visible;}
+  .synclink .arcpath{fill:none; stroke:rgba(245,115,31,.35); stroke-width:1.5;
+    stroke-dasharray:3 6; stroke-linecap:round;}
+  .cloudwrap{position:absolute; left:50%; top:6px; transform:translateX(-50%);
+    display:flex; flex-direction:column; align-items:center; gap:7px;}
+  .cloudwrap svg{width:34px; height:24px;}
+  .cloudwrap .dblabel{font-family:var(--mono); font-size:9.5px; letter-spacing:.2em; color:var(--mut);}
+  .pulse{position:absolute; top:0; left:0; width:100%; height:100%;
+    pointer-events:none; visibility:hidden;}
+  .pulse .dot{
+    width:11px; height:11px; border-radius:50%; background:var(--orange2);
+    box-shadow:0 0 14px 3px rgba(245,115,31,.65);
+    offset-path:path("M0,86 C 55,86 60,34 115,34 C 170,34 175,86 230,86");
+    offset-distance:0%;
+  }
+  .pulse.go{visibility:visible;}
+  .pulse.go .dot{animation:travel 1.15s var(--ease-io) forwards;}
+  @keyframes travel{
+    0%{offset-distance:0%; opacity:0;}
+    8%{opacity:1;}
+    82%{opacity:1;}
+    100%{offset-distance:100%; opacity:0;}
+  }
+  .devlabel{margin-top:12px; text-align:center; font-family:var(--mono);
+    font-size:10.5px; letter-spacing:.22em; color:var(--faint);}
+
+  /* ---------- SCENE 5 : CONNECT ---------- */
+  .s5 .headline{font-size:34px; font-weight:700; margin-bottom:40px;
+    opacity:0; transform:translateY(12px);}
+  .s5.on .headline{animation:rise .7s var(--ease-out) .25s forwards;}
+  .steps{display:flex; flex-direction:column; gap:16px; width:660px;}
+  .step{
+    display:flex; align-items:center; gap:24px;
+    border:1px solid rgba(232,237,244,.08); border-left:3px solid rgba(232,237,244,.12);
+    border-radius:11px; padding:20px 26px; background:rgba(232,237,244,.02);
+    opacity:0; transform:translateX(-16px);
+    transition:border-color .5s, background .5s, box-shadow .5s;
+  }
+  .step.in{animation:stepin .6s var(--ease-out) forwards;}
+  @keyframes stepin{to{opacity:1; transform:translateX(0);}}
+  .step.lit{border-left-color:var(--orange); border-color:rgba(245,115,31,.32);
+    background:rgba(245,115,31,.05);
+    box-shadow:0 0 34px rgba(245,115,31,.07);}
+  .snum{font-family:var(--mono); font-size:24px; color:var(--faint); flex:none;
+    transition:color .5s; width:38px;}
+  .step.lit .snum{color:var(--orange);}
+  .sbody{font-size:19.5px; line-height:1.45;}
+  .sbody small{display:block; font-size:13px; color:var(--mut); margin-top:3px;}
+  .urlpill{
+    display:inline-block; margin-top:9px; font-family:var(--mono); font-size:19px;
+    color:var(--orange2); background:var(--ink);
+    border:1px solid rgba(245,115,31,.4); border-radius:9px; padding:9px 18px;
+    letter-spacing:.01em;
+  }
+
+  /* ---------- SCENE 6 : CLOSE ---------- */
+  .s6 .brandlock{transform:scale(.62); margin-bottom:-16px;}
+  .s6 .mark .bar{transform:scaleX(1);}
+  .s6 .lock6{opacity:0; transform:translateY(14px);}
+  .s6.on .lock6{animation:rise .9s var(--ease-out) .2s forwards;}
+  .s6.on .mark{animation:markglow 2.4s var(--ease-io) .6s forwards;}
+  .s6 .wordmark{opacity:1; transform:none; filter:none; animation:none;}
+  .bigurl{
+    margin-top:26px; font-family:var(--mono); font-size:31px; color:var(--text);
+    letter-spacing:.01em; opacity:0; transform:translateY(10px);
+  }
+  .bigurl b{color:var(--orange); font-weight:500;}
+  .s6.on .bigurl{animation:rise .8s var(--ease-out) 1s forwards;}
+  .s6 .tagline{margin-top:18px; font-size:21px; opacity:0;}
+  .s6.on .tagline{animation:fadein .8s var(--ease-io) 1.7s forwards;}
+  .replay-big{
+    margin-top:34px; display:inline-flex; align-items:center; gap:10px;
+    font-family:var(--mono); font-size:13px; letter-spacing:.22em; color:var(--orange);
+    background:transparent; border:1px solid rgba(245,115,31,.55); border-radius:99px;
+    padding:12px 26px; cursor:pointer; opacity:0;
+    transition:background .25s, color .25s;
+  }
+  .s6.on .replay-big{animation:fadein .7s var(--ease-io) 2.3s forwards;}
+  .replay-big:hover{background:var(--orange); color:var(--ink);}
+
+  /* ============ CONTROL STRIP (under stage) ============ */
+  .controls{display:flex; align-items:center; gap:16px; width:100%;}
+  .ptrack{flex:1; height:3px; border-radius:99px; background:rgba(232,237,244,.1);
+    position:relative; overflow:visible;}
+  .pfill{position:absolute; left:0; top:0; bottom:0; width:0%;
+    background:var(--orange); border-radius:99px;}
+  .ptick{position:absolute; top:-2.5px; width:1px; height:8px; background:var(--faint);}
+  .replay-mini{
+    font-family:var(--mono); font-size:10.5px; letter-spacing:.2em; color:var(--mut);
+    background:transparent; border:1px solid rgba(232,237,244,.18); border-radius:99px;
+    padding:6px 14px; cursor:pointer; transition:color .2s, border-color .2s;
+  }
+  .replay-mini:hover{color:var(--orange); border-color:var(--orange);}
+
+  /* ============ REDUCED MOTION ============ */
+  @media (prefers-reduced-motion: reduce){
+    .scene{transition:opacity .5s linear;}
+    .on .caption, .s2.on .panel, .s2.on .trow,
+    .on .wordmark, .on .tagline, .on .verline,
+    .s4.on .headline, .s4.on .device, .s4.on .synclink,
+    .s5.on .headline, .step.in,
+    .s6.on .lock6, .s6.on .bigurl, .s6.on .tagline, .s6.on .replay-big{
+      animation:rmfade .5s linear forwards;
+    }
+    @keyframes rmfade{to{opacity:1; transform:none; filter:none;}}
+    .on .mark .bar{animation:rmfade .5s linear forwards; transform:scaleX(1);}
+    .on .mark, .s6.on .mark{animation:none;}
+    .beacon{animation:none; box-shadow:0 0 0 3px rgba(227,160,8,.25);}
+    .caret{animation:none;}
+    .pulse.go .dot{animation:none; offset-distance:100%; visibility:hidden;}
+    .tape-fill{transition:none;}
+    .trow.newrow{transition:opacity .4s linear;}
+    .compose{transition:opacity .3s linear;}
+  }
+</style>
+
+<div class="viewport">
+  <div class="stage-slot" id="slot">
+    <div class="stage" id="stage">
+      <span class="cornt c-tl"></span><span class="cornt c-tr"></span>
+      <span class="cornt c-bl"></span><span class="cornt c-br"></span>
+      <div class="hud hud-l">WINGMAN / OPS REEL</div>
+      <div class="hud hud-r">T+<b id="tc">00:00.0</b></div>
+
+      <!-- SCENE 1 : BRAND OPEN -->
+      <section class="scene s1" id="sc1">
+        <div class="brandlock">
+          <svg class="mark" viewBox="0 0 64 64" aria-hidden="true">
+            <g fill="#F5731F">
+              <path class="bar b1" d="M14 15 H52 L44 23 H14 Z"/>
+              <path class="bar b2" d="M14 27 H40 L32 35 H14 Z" opacity="0.72"/>
+              <path class="bar b3" d="M14 39 H28 L20 47 H14 Z" opacity="0.44"/>
+            </g>
+          </svg>
+          <div class="wordmark">WINGMAN</div>
+        </div>
+        <div class="tagline">Your plans. <em>Synced everywhere.</em></div>
+        <div class="verline">MCP PLAN COPILOT / v0.3.0</div>
+      </section>
+
+      <!-- SCENE 2 : THE PANEL -->
+      <section class="scene s2" id="sc2">
+        <div class="panel">
+          <div class="phead">
+            <div class="phead-l">
+              <svg class="minimark" viewBox="0 0 64 64" aria-hidden="true">
+                <g fill="#F5731F">
+                  <path d="M14 15 H52 L44 23 H14 Z"/>
+                  <path d="M14 27 H40 L32 35 H14 Z" opacity="0.72"/>
+                  <path d="M14 39 H28 L20 47 H14 Z" opacity="0.44"/>
+                </g>
+              </svg>
+              <div>
+                <div class="ptitle">Launch Wingman</div>
+                <div class="psub">4 TASKS - 0 DONE</div>
+              </div>
+            </div>
+            <div class="phead-r">
+              <div class="pct">0%</div>
+              <span class="donepill">0 DONE</span>
+            </div>
+          </div>
+          <div class="tape"><div class="tape-fill"></div><div class="tape-notch"></div></div>
+          <div class="tasks">
+            <div class="trow"><span class="rail"></span><span class="cb"><svg viewBox="0 0 12 12"><path d="M2.5 6.5 5 9l4.5-5.5"/></svg></span><span class="ttext">Wire up the cloud sync<span class="strike"></span></span></div>
+            <div class="trow"><span class="rail"></span><span class="cb"><svg viewBox="0 0 12 12"><path d="M2.5 6.5 5 9l4.5-5.5"/></svg></span><span class="ttext">Ship the panel redesign<span class="strike"></span></span></div>
+            <div class="trow"><span class="rail"></span><span class="cb"><svg viewBox="0 0 12 12"><path d="M2.5 6.5 5 9l4.5-5.5"/></svg></span><span class="ttext">Write the launch post<span class="strike"></span></span></div>
+            <div class="trow"><span class="rail"></span><span class="cb"><svg viewBox="0 0 12 12"><path d="M2.5 6.5 5 9l4.5-5.5"/></svg></span><span class="ttext">Record the demo<span class="strike"></span></span></div>
+          </div>
+        </div>
+        <div class="caption">A shared checklist, right inside your chat.</div>
+      </section>
+
+      <!-- SCENE 3 : IN ACTION -->
+      <section class="scene s3" id="sc3">
+        <div class="panel">
+          <div class="phead">
+            <div class="phead-l">
+              <svg class="minimark" viewBox="0 0 64 64" aria-hidden="true">
+                <g fill="#F5731F">
+                  <path d="M14 15 H52 L44 23 H14 Z"/>
+                  <path d="M14 27 H40 L32 35 H14 Z" opacity="0.72"/>
+                  <path d="M14 39 H28 L20 47 H14 Z" opacity="0.44"/>
+                </g>
+              </svg>
+              <div>
+                <div class="ptitle">Launch Wingman</div>
+                <div class="psub" id="s3sub">4 TASKS - 0 DONE</div>
+              </div>
+            </div>
+            <div class="phead-r">
+              <div class="pct" id="s3pct">0%</div>
+              <span class="donepill" id="s3pill">0 DONE</span>
+            </div>
+          </div>
+          <div class="tape"><div class="tape-fill" id="s3fill"></div><div class="tape-notch"></div></div>
+          <div class="tasks" id="s3tasks">
+            <div class="trow" id="t1"><span class="rail"></span><span class="cb"><svg viewBox="0 0 12 12"><path d="M2.5 6.5 5 9l4.5-5.5"/></svg></span><span class="ttext">Wire up the cloud sync<span class="strike"></span></span></div>
+            <div class="trow" id="t2"><span class="rail"></span><span class="cb"><svg viewBox="0 0 12 12"><path d="M2.5 6.5 5 9l4.5-5.5"/></svg></span><span class="ttext">Ship the panel redesign<span class="strike"></span></span></div>
+            <div class="trow" id="t3"><span class="rail"></span><span class="cb"><svg viewBox="0 0 12 12"><path d="M2.5 6.5 5 9l4.5-5.5"/></svg></span><span class="ttext">Write the launch post<span class="strike"></span></span></div>
+            <div class="trow" id="t4"><span class="rail"></span><span class="cb"><svg viewBox="0 0 12 12"><path d="M2.5 6.5 5 9l4.5-5.5"/></svg></span><span class="ttext">Record the demo<span class="strike"></span></span><span class="flight"><span class="beacon"></span>IN FLIGHT</span></div>
+            <div class="trow newrow" id="t5"><span class="rail"></span><span class="cb"><svg viewBox="0 0 12 12"><path d="M2.5 6.5 5 9l4.5-5.5"/></svg></span><span class="ttext">Tell everyone<span class="strike"></span></span></div>
+          </div>
+          <div class="compose" id="compose"><span class="plus">+</span><span id="typed"></span><span class="caret"></span></div>
+        </div>
+        <div class="caption">Add, check off, mark what's in flight - live.</div>
+      </section>
+
+      <!-- SCENE 4 : SYNC -->
+      <section class="scene s4" id="sc4">
+        <div class="headline">Every device. Always in sync.</div>
+        <div class="syncrow">
+          <div class="device laptop">
+            <div class="lscreen">
+              <div class="mini">
+                <div class="mhead">
+                  <svg viewBox="0 0 64 64" aria-hidden="true"><g fill="#F5731F"><path d="M14 15 H52 L44 23 H14 Z"/><path d="M14 27 H40 L32 35 H14 Z" opacity="0.72"/><path d="M14 39 H28 L20 47 H14 Z" opacity="0.44"/></g></svg>
+                  <span class="mtitle">Launch Wingman</span>
+                </div>
+                <div class="mtape mini-tape"><div class="tape-fill lp-fill" style="transform:scaleX(0.33)"></div><div class="tape-notch"></div></div>
+                <div class="mrow done"><span class="mcb"><svg viewBox="0 0 12 12"><path d="M2.5 6.5 5 9l4.5-5.5"/></svg></span><span class="mtx">Write the launch post</span></div>
+                <div class="mrow" id="lp2"><span class="mcb"><svg viewBox="0 0 12 12"><path d="M2.5 6.5 5 9l4.5-5.5"/></svg></span><span class="mtx">Record the demo</span></div>
+                <div class="mrow" id="lp3"><span class="mcb"><svg viewBox="0 0 12 12"><path d="M2.5 6.5 5 9l4.5-5.5"/></svg></span><span class="mtx">Tell everyone</span></div>
+              </div>
+            </div>
+            <div class="lbase"></div>
+            <div class="devlabel">LAPTOP / CLAUDE</div>
+          </div>
+          <div class="synclink">
+            <svg class="arc" viewBox="0 0 230 120" aria-hidden="true">
+              <path class="arcpath" d="M0,86 C 55,86 60,34 115,34 C 170,34 175,86 230,86"/>
+            </svg>
+            <div class="cloudwrap">
+              <svg viewBox="0 0 34 24" aria-hidden="true">
+                <path d="M27 21H9a7 7 0 0 1-1.6-13.8A9 9 0 0 1 25 9.2 6 6 0 0 1 27 21Z"
+                  fill="none" stroke="#F5731F" stroke-width="1.6" stroke-linejoin="round"/>
+              </svg>
+              <span class="dblabel">NEON / POSTGRES</span>
+            </div>
+            <div class="pulse" id="pulse1"><div class="dot"></div></div>
+            <div class="pulse" id="pulse2"><div class="dot"></div></div>
+          </div>
+          <div class="device phone">
+            <div class="mini">
+              <div class="mhead">
+                <svg viewBox="0 0 64 64" aria-hidden="true"><g fill="#F5731F"><path d="M14 15 H52 L44 23 H14 Z"/><path d="M14 27 H40 L32 35 H14 Z" opacity="0.72"/><path d="M14 39 H28 L20 47 H14 Z" opacity="0.44"/></g></svg>
+                <span class="mtitle">Launch Wingman</span>
+              </div>
+              <div class="mtape mini-tape"><div class="tape-fill ph-fill" style="transform:scaleX(0.33)"></div><div class="tape-notch"></div></div>
+              <div class="mrow done"><span class="mcb"><svg viewBox="0 0 12 12"><path d="M2.5 6.5 5 9l4.5-5.5"/></svg></span><span class="mtx">Write the launch post</span></div>
+              <div class="mrow" id="ph2"><span class="mcb"><svg viewBox="0 0 12 12"><path d="M2.5 6.5 5 9l4.5-5.5"/></svg></span><span class="mtx">Record the demo</span></div>
+              <div class="mrow" id="ph3"><span class="mcb"><svg viewBox="0 0 12 12"><path d="M2.5 6.5 5 9l4.5-5.5"/></svg></span><span class="mtx">Tell everyone</span></div>
+            </div>
+            <div class="devlabel">PHONE / ANY MCP AI</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SCENE 5 : CONNECT IN 3 STEPS -->
+      <section class="scene s5" id="sc5">
+        <div class="headline">Connect in three steps</div>
+        <div class="steps">
+          <div class="step" id="st1">
+            <span class="snum">01</span>
+            <div class="sbody">Open Connectors, add a custom connector</div>
+          </div>
+          <div class="step" id="st2">
+            <span class="snum">02</span>
+            <div class="sbody">Paste the URL
+              <br><code class="urlpill">https://wingman-mcp.onrender.com/mcp</code>
+            </div>
+          </div>
+          <div class="step" id="st3">
+            <span class="snum">03</span>
+            <div class="sbody">Sign in - your plans are already there</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SCENE 6 : CLOSE -->
+      <section class="scene s6" id="sc6">
+        <div class="lock6">
+          <div class="brandlock">
+            <svg class="mark" viewBox="0 0 64 64" aria-hidden="true">
+              <g fill="#F5731F">
+                <path class="bar" d="M14 15 H52 L44 23 H14 Z"/>
+                <path class="bar" d="M14 27 H40 L32 35 H14 Z" opacity="0.72"/>
+                <path class="bar" d="M14 39 H28 L20 47 H14 Z" opacity="0.44"/>
+              </g>
+            </svg>
+            <div class="wordmark">WINGMAN</div>
+          </div>
+        </div>
+        <div class="bigurl"><b>wingman-mcp.onrender.com</b>/mcp</div>
+        <div class="tagline">Free. Open. Yours.</div>
+        <button class="replay-big" id="replayBig">&#8635;&nbsp; REPLAY</button>
+      </section>
+    </div>
+  </div>
+
+  <div class="controls" id="controls">
+    <div class="ptrack" id="ptrack"><div class="pfill" id="pfill"></div></div>
+    <button class="replay-mini" id="replayMini">&#8635; REPLAY</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var RM = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var TOTAL = 56; // seconds
+  var BOUNDS = [0, 6, 15, 26, 38, 50]; // scene start times
+
+  var stage = document.getElementById("stage");
+  var slot = document.getElementById("slot");
+  var controls = document.getElementById("controls");
+  var scenes = [1,2,3,4,5,6].map(function(n){ return document.getElementById("sc"+n); });
+  var pfill = document.getElementById("pfill");
+  var tc = document.getElementById("tc");
+
+  // ---- fit stage to viewport (design size 1120 x 630) ----
+  function fit(){
+    var s = Math.min((window.innerWidth - 40)/1120, (window.innerHeight - 90)/630, 1);
+    stage.style.transform = "scale(" + s + ")";
+    slot.style.width = (1120*s) + "px";
+    slot.style.height = (630*s) + "px";
+    controls.style.width = (1120*s) + "px";
+  }
+  window.addEventListener("resize", fit);
+  fit();
+
+  // scene boundary ticks on the progress track
+  var ptrack = document.getElementById("ptrack");
+  BOUNDS.slice(1).forEach(function(t){
+    var tick = document.createElement("span");
+    tick.className = "ptick";
+    tick.style.left = (t/TOTAL*100) + "%";
+    ptrack.appendChild(tick);
+  });
+
+  // ---- helpers ----
+  var el = function(id){ return document.getElementById(id); };
+  var tweens = [];
+  function tween(from, to, dur, update){
+    if (RM){ update(to); return; }
+    tweens.push({from:from, to:to, dur:dur, update:update, t0:null});
+  }
+  function easeOutCubic(x){ return 1 - Math.pow(1-x, 3); }
+
+  var pctVal = 0;
+  function setPct(v){
+    pctVal = v;
+    el("s3pct").textContent = Math.round(v) + "%";
+    el("s3fill").style.transform = "scaleX(" + (v/100) + ")";
+  }
+  function pctTo(target){
+    var start = pctVal;
+    tween(start, target, 0.9, function(v){
+      el("s3pct").textContent = Math.round(v) + "%";
+    });
+    el("s3fill").style.transform = "scaleX(" + (target/100) + ")"; // tape eases via CSS transition
+    pctVal = target;
+  }
+  function checkTask(id, doneCount, pctTarget){
+    el(id).classList.add("done");
+    var pill = el("s3pill");
+    pill.textContent = doneCount + " DONE";
+    pill.classList.add("hasdone");
+    pctTo(pctTarget);
+  }
+
+  // ---- event timeline ----
+  var events = [];
+  function at(t, fn){ events.push({t:t, fn:fn, fired:false}); }
+
+  function showScene(i){
+    scenes.forEach(function(s, j){ s.classList.toggle("on", i === j); });
+  }
+
+  // scene switches
+  at(0.0,  function(){ showScene(0); });
+  at(6.0,  function(){ showScene(1); });
+  at(15.0, function(){ showScene(2); });
+  at(26.0, function(){ showScene(3); });
+  at(38.0, function(){ showScene(4); });
+  at(50.0, function(){ showScene(5); });
+
+  // scene 3 : typing + checks + count-up
+  var NEWTASK = "Tell everyone";
+  at(15.9, function(){ el("compose").classList.add("show"); });
+  if (RM){
+    at(16.4, function(){ el("typed").textContent = NEWTASK; });
+  } else {
+    for (var ci = 0; ci < NEWTASK.length; ci++){
+      (function(i){
+        at(16.4 + i*0.055, function(){
+          el("typed").textContent = NEWTASK.slice(0, i+1);
+        });
+      })(ci);
+    }
+  }
+  at(17.6, function(){
+    el("compose").classList.add("gone");
+    el("t5").classList.add("landed");
+    el("s3sub").textContent = "5 TASKS - 0 DONE";
+  });
+  at(18.7, function(){ checkTask("t1", 1, 20); el("s3sub").textContent = "5 TASKS - 1 DONE"; });
+  at(19.9, function(){ checkTask("t2", 2, 40); el("s3sub").textContent = "5 TASKS - 2 DONE"; });
+  at(21.3, function(){ checkTask("t3", 3, 60); el("s3sub").textContent = "5 TASKS - 3 DONE"; });
+  at(22.6, function(){ el("t4").classList.add("prog"); });
+
+  // scene 4 : cross-device sync
+  at(28.2, function(){ el("lp2").classList.add("done"); el("pulse1").classList.add("go");
+                       document.querySelector(".lp-fill").style.transform = "scaleX(0.66)"; });
+  at(29.5, function(){ el("ph2").classList.add("done");
+                       document.querySelector(".ph-fill").style.transform = "scaleX(0.66)"; });
+  at(31.8, function(){ el("lp3").classList.add("done"); el("pulse2").classList.add("go");
+                       document.querySelector(".lp-fill").style.transform = "scaleX(1)"; });
+  at(33.1, function(){ el("ph3").classList.add("done");
+                       document.querySelector(".ph-fill").style.transform = "scaleX(1)"; });
+
+  // scene 5 : steps
+  at(38.6, function(){ el("st1").classList.add("in","lit"); });
+  at(42.4, function(){ el("st1").classList.remove("lit"); el("st2").classList.add("in","lit"); });
+  at(46.4, function(){ el("st2").classList.remove("lit"); el("st3").classList.add("in","lit"); });
+
+  // ---- reset ----
+  function resetAll(){
+    scenes.forEach(function(s){ s.classList.remove("on"); });
+    ["t1","t2","t3"].forEach(function(id){ el(id).classList.remove("done"); });
+    el("t4").classList.remove("prog");
+    el("t5").classList.remove("landed");
+    var comp = el("compose");
+    comp.classList.remove("show","gone");
+    el("typed").textContent = "";
+    el("s3sub").textContent = "4 TASKS - 0 DONE";
+    var pill = el("s3pill");
+    pill.textContent = "0 DONE"; pill.classList.remove("hasdone");
+    setPct(0); pctVal = 0;
+    ["lp2","lp3","ph2","ph3"].forEach(function(id){ el(id).classList.remove("done"); });
+    el("pulse1").classList.remove("go"); el("pulse2").classList.remove("go");
+    document.querySelector(".lp-fill").style.transform = "scaleX(0.33)";
+    document.querySelector(".ph-fill").style.transform = "scaleX(0.33)";
+    ["st1","st2","st3"].forEach(function(id){ el(id).classList.remove("in","lit"); });
+    events.forEach(function(e){ e.fired = false; });
+    tweens.length = 0;
+    pfill.style.width = "0%";
+    tc.textContent = "00:00.0";
+    // force reflow so CSS animations restart cleanly on replay
+    void stage.offsetWidth;
+  }
+
+  // ---- engine ----
+  var t0 = null, rafId = null, running = false;
+  function loop(now){
+    if (t0 === null) t0 = now;
+    var t = (now - t0) / 1000;
+    if (t > TOTAL) t = TOTAL;
+
+    for (var i = 0; i < events.length; i++){
+      var e = events[i];
+      if (!e.fired && t >= e.t){ e.fired = true; e.fn(); }
+    }
+    for (var j = tweens.length - 1; j >= 0; j--){
+      var tw = tweens[j];
+      if (tw.t0 === null) tw.t0 = now;
+      var p = Math.min((now - tw.t0)/1000/tw.dur, 1);
+      tw.update(tw.from + (tw.to - tw.from) * easeOutCubic(p));
+      if (p >= 1) tweens.splice(j, 1);
+    }
+    pfill.style.width = (t/TOTAL*100) + "%";
+    var mm = String(Math.floor(t/60)).padStart(2,"0");
+    var ss = String(Math.floor(t%60)).padStart(2,"0");
+    var d  = String(Math.floor((t%1)*10));
+    tc.textContent = mm + ":" + ss + "." + d;
+
+    if (t < TOTAL){ rafId = requestAnimationFrame(loop); }
+    else { running = false; } // hold on scene 6
+  }
+  function start(){
+    if (rafId) cancelAnimationFrame(rafId);
+    resetAll();
+    t0 = null; running = true;
+    rafId = requestAnimationFrame(loop);
+  }
+
+  document.getElementById("replayMini").addEventListener("click", start);
+  document.getElementById("replayBig").addEventListener("click", start);
+
+  // autoplay
+  start();
+})();
+</script>
