@@ -13,9 +13,7 @@ _Sits beside you. Doesn't fly the plane._
 
 <br/>
 
-<!-- Swap to docs/assets/wingman-demo.gif once the explainer loop is recorded. -->
-<img src="docs/assets/panel-populated.png" alt="Wingman plan panel" width="360">
-<img src="docs/assets/panel-in-progress.png" alt="Wingman live status" width="360">
+![Wingman demo](docs/assets/wingman-demo.gif)
 
 <br/>
 
