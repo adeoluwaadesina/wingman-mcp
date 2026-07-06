@@ -16,6 +16,8 @@ signed in. Your plans live in the cloud (Neon Postgres) and sync across devices.
 
 ## Connect, per host
 
+![Connecting Wingman in three steps](../assets/connect-3steps.gif)
+
 ### Claude (desktop + web + mobile)
 1. Open **Settings -> Connectors -> Add custom connector**.
 2. Paste the URL above.
