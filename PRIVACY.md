@@ -97,4 +97,4 @@ the "Last updated" date above and in the project's changelog.
 
 Questions or data requests: open an issue at
 <https://github.com/adeoluwaadesina/wingman-mcp/issues>, or email
-**orekoyaferanmi5@gmail.com**.
+**adeoluwaadesina26@gmail.com**.
