@@ -265,9 +265,9 @@ Rename plan, Clear completed, Build from conversation, Clear all tasks, Export a
 </td>
 <td width="50%">
 
-**Export + mobile**
+**Export as markdown**
 
-Export a plan to markdown in an in-panel copy sheet. On phones the panel keeps a compact header, a visible delete control, and smooth touch scrolling.
+Export a plan to markdown in an in-panel copy sheet - one tap to grab the whole checklist, no host warnings, no leaving the panel.
 
 </td>
 </tr>
@@ -279,13 +279,41 @@ Export a plan to markdown in an in-panel copy sheet. On phones the panel keeps a
 </td>
 <td>
 
-![Export and mobile](docs/assets/panel-mobile.png)
+![Export as markdown](docs/assets/panel-export.png)
+
+</td>
+</tr>
+<tr>
+<td width="50%">
+
+**On your phone**
+
+The same panel reflows for touch: bigger checkboxes, an always-visible delete control, run and in-progress buttons on every row, and a list that grows so the page scrolls naturally.
+
+</td>
+<td width="50%">
+
+**Light or dark**
+
+Follows your theme automatically, and the sun toggle cycles auto - light - dark. The orange runway accent carries across both.
+
+</td>
+</tr>
+<tr>
+<td>
+
+![Wingman on mobile](docs/assets/panel-mobile.png)
+
+</td>
+<td>
+
+![Light theme](docs/assets/panel-populated-light.png)
 
 </td>
 </tr>
 </table>
 
-> Asset files live in [`docs/assets/`](docs/assets/); capture them from the explainer or the live panel per [`docs/launch/connect-walkthrough.md`](docs/launch/connect-walkthrough.md).
+> These are the live panel rendered exactly as it appears in Claude. Asset files live in [`docs/assets/`](docs/assets/); the animated hero loop and 3-step connect GIF are captured from the explainer per [`docs/launch/connect-walkthrough.md`](docs/launch/connect-walkthrough.md).
 
 <br/>
 
