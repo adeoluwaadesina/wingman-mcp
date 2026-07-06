@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from mcp.server.fastmcp import FastMCP
-from mcp.types import CallToolResult, TextContent
+from mcp.types import CallToolResult, TextContent, ToolAnnotations
 
 from . import identity, store_pg
 from .config_cloud import CloudConfig
@@ -151,6 +151,9 @@ def _register_panel_tools(mcp: FastMCP, cfg: CloudConfig) -> None:
     @mcp.tool(
         meta=SHOW_PLAN_META,
         description="Render a plan as an interactive panel inline in the conversation.",
+        annotations=ToolAnnotations(
+            title="Show Plan Panel", readOnlyHint=True, openWorldHint=False,
+        ),
     )
     async def show_plan(plan_name: str) -> CallToolResult:
         return await tool_show_plan(plan_name)
@@ -160,6 +163,9 @@ def _register_panel_tools(mcp: FastMCP, cfg: CloudConfig) -> None:
         description=(
             "Render a clickable list of all plans as an interactive panel. "
             "Use this when the user wants to see or pick from their plans."
+        ),
+        annotations=ToolAnnotations(
+            title="Show All Plans", readOnlyHint=True, openWorldHint=False,
         ),
     )
     async def show_plans() -> CallToolResult:
@@ -313,43 +319,101 @@ def build_mcp(cfg: CloudConfig) -> FastMCP:
         ),
     )
 
-    @mcp.tool(description="Create a new named plan with optional initial tasks.")
+    @mcp.tool(
+        description="Create a new named plan with optional initial tasks.",
+        annotations=ToolAnnotations(
+            title="Create Plan", readOnlyHint=False, destructiveHint=False,
+            idempotentHint=False, openWorldHint=False,
+        ),
+    )
     async def create_plan(name: str, tasks: list[str] | None = None) -> dict[str, Any]:
         return await tool_create_plan(cfg, name, tasks)
 
-    @mcp.tool(description="Append a single task to a plan.")
+    @mcp.tool(
+        description="Append a single task to a plan.",
+        annotations=ToolAnnotations(
+            title="Add Task", readOnlyHint=False, destructiveHint=False,
+            idempotentHint=False, openWorldHint=False,
+        ),
+    )
     async def add_task(plan_name: str, content: str) -> dict[str, Any]:
         return await tool_add_task(cfg, plan_name, content)
 
-    @mcp.tool(description="Append multiple tasks to a plan in one call.")
+    @mcp.tool(
+        description="Append multiple tasks to a plan in one call.",
+        annotations=ToolAnnotations(
+            title="Add Tasks", readOnlyHint=False, destructiveHint=False,
+            idempotentHint=False, openWorldHint=False,
+        ),
+    )
     async def add_tasks(plan_name: str, tasks: list[str]) -> dict[str, Any]:
         return await tool_add_tasks(cfg, plan_name, tasks)
 
-    @mcp.tool(description="Return plan state as formatted text (no panel).")
+    @mcp.tool(
+        description="Return plan state as formatted text (no panel).",
+        annotations=ToolAnnotations(
+            title="Get Plan", readOnlyHint=True, openWorldHint=False,
+        ),
+    )
     async def get_plan(plan_name: str) -> dict[str, Any]:
         return await tool_get_plan(plan_name)
 
-    @mcp.tool(description="Mark a task as done.")
+    @mcp.tool(
+        description="Mark a task as done.",
+        annotations=ToolAnnotations(
+            title="Tick Task", readOnlyHint=False, destructiveHint=False,
+            idempotentHint=True, openWorldHint=False,
+        ),
+    )
     async def tick_task(plan_name: str, task_id: int) -> dict[str, Any]:
         return await tool_tick_task(plan_name, task_id)
 
-    @mcp.tool(description="Change a task's status.")
+    @mcp.tool(
+        description="Change a task's status.",
+        annotations=ToolAnnotations(
+            title="Update Task Status", readOnlyHint=False, destructiveHint=False,
+            idempotentHint=True, openWorldHint=False,
+        ),
+    )
     async def update_task_status(plan_name: str, task_id: int, status: str) -> dict[str, Any]:
         return await tool_update_status(plan_name, task_id, status)
 
-    @mcp.tool(description="Rename a plan.")
+    @mcp.tool(
+        description="Rename a plan.",
+        annotations=ToolAnnotations(
+            title="Rename Plan", readOnlyHint=False, destructiveHint=False,
+            idempotentHint=False, openWorldHint=False,
+        ),
+    )
     async def rename_plan(current_name: str, new_name: str) -> dict[str, Any]:
         return await tool_rename_plan(current_name, new_name)
 
-    @mcp.tool(description="Reorder tasks within a plan.")
+    @mcp.tool(
+        description="Reorder tasks within a plan.",
+        annotations=ToolAnnotations(
+            title="Reorder Tasks", readOnlyHint=False, destructiveHint=False,
+            idempotentHint=True, openWorldHint=False,
+        ),
+    )
     async def reorder_tasks(plan_name: str, ordered_ids: list[int]) -> dict[str, Any]:
         return await tool_reorder(plan_name, ordered_ids)
 
-    @mcp.tool(description="List all plans with task counts.")
+    @mcp.tool(
+        description="List all plans with task counts.",
+        annotations=ToolAnnotations(
+            title="List Plans", readOnlyHint=True, openWorldHint=False,
+        ),
+    )
     async def list_plans() -> dict[str, Any]:
         return await tool_list_plans()
 
-    @mcp.tool(description="Delete a plan and all its tasks.")
+    @mcp.tool(
+        description="Delete a plan and all its tasks.",
+        annotations=ToolAnnotations(
+            title="Delete Plan", readOnlyHint=False, destructiveHint=True,
+            idempotentHint=True, openWorldHint=False,
+        ),
+    )
     async def delete_plan(plan_name: str) -> dict[str, Any]:
         return await tool_delete_plan(plan_name)
 

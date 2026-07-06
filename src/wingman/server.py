@@ -15,7 +15,7 @@ import logging
 from typing import Annotated, Any, Literal
 
 from mcp.server.fastmcp import FastMCP
-from mcp.types import CallToolResult, TextContent
+from mcp.types import CallToolResult, TextContent, ToolAnnotations
 from pydantic import Field
 
 from . import prompts as prompt_templates
@@ -105,21 +105,45 @@ def build_server() -> FastMCP:
     # LLM-visible tools
     # -----------------------------------------------------------------
 
-    @mcp.tool(meta=MODEL_AND_APP, description="Create a new named plan with optional initial tasks.")
+    @mcp.tool(
+        meta=MODEL_AND_APP,
+        description="Create a new named plan with optional initial tasks.",
+        annotations=ToolAnnotations(
+            title="Create Plan", readOnlyHint=False, destructiveHint=False,
+            idempotentHint=False, openWorldHint=False,
+        ),
+    )
     def create_plan(name: PlanName, tasks: list[TaskContent] | None = None) -> dict[str, Any]:
         return plan_tools.create_plan(name, tasks or [])
 
-    @mcp.tool(meta=MODEL_AND_APP, description="Append a single task to a plan.")
+    @mcp.tool(
+        meta=MODEL_AND_APP,
+        description="Append a single task to a plan.",
+        annotations=ToolAnnotations(
+            title="Add Task", readOnlyHint=False, destructiveHint=False,
+            idempotentHint=False, openWorldHint=False,
+        ),
+    )
     def add_task(plan_name: PlanName, content: TaskContent) -> dict[str, Any]:
         return task_tools.add_task(plan_name, content)
 
-    @mcp.tool(meta=MODEL_AND_APP, description="Append multiple tasks to a plan in one call.")
+    @mcp.tool(
+        meta=MODEL_AND_APP,
+        description="Append multiple tasks to a plan in one call.",
+        annotations=ToolAnnotations(
+            title="Add Tasks", readOnlyHint=False, destructiveHint=False,
+            idempotentHint=False, openWorldHint=False,
+        ),
+    )
     def add_tasks(plan_name: PlanName, tasks: list[TaskContent]) -> dict[str, Any]:
         return task_tools.add_tasks(plan_name, tasks)
 
     @mcp.tool(
         meta=SHOW_PLAN_META,
         description="Render a plan as an interactive panel inline in the conversation.",
+        annotations=ToolAnnotations(
+            title="Show Plan Panel", readOnlyHint=True, openWorldHint=False,
+        ),
     )
     def show_plan(plan_name: PlanName) -> CallToolResult:
         # Return CallToolResult directly so `_meta` lands at the CallToolResult
@@ -135,37 +159,87 @@ def build_server() -> FastMCP:
             isError=False,
         )
 
-    @mcp.tool(meta=MODEL_AND_APP, description="Return plan state as formatted text (no panel).")
+    @mcp.tool(
+        meta=MODEL_AND_APP,
+        description="Return plan state as formatted text (no panel).",
+        annotations=ToolAnnotations(
+            title="Get Plan", readOnlyHint=True, openWorldHint=False,
+        ),
+    )
     def get_plan(plan_name: PlanName) -> dict[str, Any]:
         return plan_tools.get_plan(plan_name)
 
-    @mcp.tool(meta=MODEL_AND_APP, description="Mark a task as done.")
+    @mcp.tool(
+        meta=MODEL_AND_APP,
+        description="Mark a task as done.",
+        annotations=ToolAnnotations(
+            title="Tick Task", readOnlyHint=False, destructiveHint=False,
+            idempotentHint=True, openWorldHint=False,
+        ),
+    )
     def tick_task(plan_name: PlanName, task_id: int) -> dict[str, Any]:
         return task_tools.tick_task(plan_name, task_id)
 
-    @mcp.tool(meta=MODEL_AND_APP, description="Change a task's status.")
+    @mcp.tool(
+        meta=MODEL_AND_APP,
+        description="Change a task's status.",
+        annotations=ToolAnnotations(
+            title="Update Task Status", readOnlyHint=False, destructiveHint=False,
+            idempotentHint=True, openWorldHint=False,
+        ),
+    )
     def update_task_status(plan_name: PlanName, task_id: int, status: TaskStatus) -> dict[str, Any]:
         return task_tools.update_task_status(plan_name, task_id, status)
 
-    @mcp.tool(meta=MODEL_AND_APP, description="Rename a plan.")
+    @mcp.tool(
+        meta=MODEL_AND_APP,
+        description="Rename a plan.",
+        annotations=ToolAnnotations(
+            title="Rename Plan", readOnlyHint=False, destructiveHint=False,
+            idempotentHint=False, openWorldHint=False,
+        ),
+    )
     def rename_plan(current_name: PlanName, new_name: PlanName) -> dict[str, Any]:
         return plan_tools.rename_plan(current_name, new_name)
 
-    @mcp.tool(meta=MODEL_AND_APP, description="Reorder tasks within a plan.")
+    @mcp.tool(
+        meta=MODEL_AND_APP,
+        description="Reorder tasks within a plan.",
+        annotations=ToolAnnotations(
+            title="Reorder Tasks", readOnlyHint=False, destructiveHint=False,
+            idempotentHint=True, openWorldHint=False,
+        ),
+    )
     def reorder_tasks(plan_name: PlanName, ordered_ids: list[int]) -> dict[str, Any]:
         return task_tools.reorder_tasks(plan_name, ordered_ids)
 
-    @mcp.tool(meta=MODEL_AND_APP, description="List all plans with task counts.")
+    @mcp.tool(
+        meta=MODEL_AND_APP,
+        description="List all plans with task counts.",
+        annotations=ToolAnnotations(
+            title="List Plans", readOnlyHint=True, openWorldHint=False,
+        ),
+    )
     def list_plans() -> dict[str, Any]:
         return plan_tools.list_plans()
 
-    @mcp.tool(meta=MODEL_AND_APP, description="Delete a plan and all its tasks.")
+    @mcp.tool(
+        meta=MODEL_AND_APP,
+        description="Delete a plan and all its tasks.",
+        annotations=ToolAnnotations(
+            title="Delete Plan", readOnlyHint=False, destructiveHint=True,
+            idempotentHint=True, openWorldHint=False,
+        ),
+    )
     def delete_plan(plan_name: PlanName) -> dict[str, Any]:
         return plan_tools.delete_plan(plan_name)
 
     @mcp.tool(
         meta=SHOW_PLAN_META,
         description="Render a clickable list of all plans as an interactive panel. Use this when the user wants to see or pick from their plans.",
+        annotations=ToolAnnotations(
+            title="Show All Plans", readOnlyHint=True, openWorldHint=False,
+        ),
     )
     def show_plans() -> CallToolResult:
         # Binds to the same ui://wingman/panel resource as show_plan. The panel

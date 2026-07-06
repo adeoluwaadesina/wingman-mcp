@@ -397,6 +397,7 @@ Once installed, any MCP-compatible agent can call Wingman's plan management tool
 - **Sandboxed UI.** The panel runs in a host-sandboxed iframe with a strict CSP (`connect-src 'self'`). No cross-origin access.
 - **Parameterized SQL throughout.** No string-built queries. Validated via full test suite.
 - **Path-traversal safe.** Plan names are allow-list validated - letters, digits, space, hyphen, underscore, apostrophe, period, colon, parentheses. Slashes, backslashes, `..` sequences, null bytes, newlines, and tabs are blocked.
+- **Privacy policy.** Full details of what each edition collects, stores, and shares are in [PRIVACY.md](PRIVACY.md). Short version: the local edition keeps everything on your machine; the hosted edition stores only your account identity and your plans/tasks, never sells data, and never trains models on it.
 
 <br/>
 
