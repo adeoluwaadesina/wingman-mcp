@@ -54,6 +54,10 @@ htmlcov/
 .DS_Store
 Thumbs.db
 
+# Tooling caches (local only)
+.impeccable/
+.playwright-mcp/
+
 # Local databases (developer scratch)
 *.db
 plans.db
