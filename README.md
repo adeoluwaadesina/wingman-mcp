@@ -176,12 +176,56 @@ plan you build on your laptop is right there on your phone.
    connected. You only do this once per device; you stay signed in afterward.
 
 That's it - create a plan on one device and it shows up on the others. The
-interactive panel renders where the host supports it (Claude desktop today), and
-the clean text view is used everywhere else.
+interactive panel renders where the host supports it (Claude desktop and ChatGPT
+today), and the clean text view is used everywhere else.
 
 > Wingman Cloud is in early hosted beta. The local `pip install wingman` stays
 > fully supported and zero-telemetry; the hosted service adds accounts and
 > cross-device sync (see Security & privacy below).
+
+<br/>
+
+---
+
+## Use Wingman in ChatGPT
+
+ChatGPT can connect to Wingman Cloud as a custom MCP connector. Tools work
+immediately, and the interactive panel renders inline when you ask ChatGPT to
+show a plan.
+
+> Requires a ChatGPT **Plus, Pro, Business, or Enterprise/Edu** account on
+> **web** (Developer Mode is not available on the mobile apps).
+
+**1. Turn on Developer Mode**
+
+1. Click your profile picture (bottom-left) -> **Settings**.
+2. Open **Apps & Connectors** in the left rail.
+3. Scroll to the bottom, open **Advanced settings**, and toggle **Developer
+   mode** on. (Shortcut once you are in ChatGPT: `Ctrl` + `.`)
+
+**2. Add Wingman as a connector**
+
+1. Back on **Apps & Connectors**, click **Create** (add custom connector).
+2. Fill in:
+   - **Name:** `Wingman`
+   - **MCP Server URL:** `https://wingman-mcp.onrender.com/mcp`
+   - **Authentication:** OAuth
+3. Save, then sign in with Google or email when the OAuth window opens. You only
+   do this once per device.
+
+**3. Use it**
+
+Start a **new chat** (Developer Mode tools only appear in chats opened after you
+connect), then try:
+
+> Use Wingman to create a plan called "Launch" with three tasks: draft, review,
+> ship. Then show me the plan.
+
+The plan syncs with the same account you use in Claude, so anything you build in
+ChatGPT is on your other devices too.
+
+> First call after an idle spell can take a few seconds - the hosted service runs
+> on a free tier that sleeps when idle, then wakes and is fast.
 
 <br/>
 

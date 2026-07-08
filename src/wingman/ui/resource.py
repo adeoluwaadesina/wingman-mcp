@@ -50,25 +50,45 @@ def icon_svg() -> str:
     return _read("icon.svg")
 
 
+def icon_png_bytes() -> bytes:
+    """The Wingman brand mark rasterized to a 512x512 PNG."""
+    return (STATIC_DIR / "icon.png").read_bytes()
+
+
 def icon_data_uri() -> str:
     b64 = base64.b64encode(icon_svg().encode("utf-8")).decode("ascii")
     return f"data:image/svg+xml;base64,{b64}"
+
+
+def icon_png_data_uri() -> str:
+    b64 = base64.b64encode(icon_png_bytes()).decode("ascii")
+    return f"data:image/png;base64,{b64}"
 
 
 def server_icons(base_url: str | None = None) -> list[Icon]:
     """The Wingman brand mark, declared in the MCP server's Implementation info
     so hosts render it in place of the fallback initial next to tool calls.
 
-    When ``base_url`` is given (the hosted cloud server), the icon is referenced
+    PNG is listed first because more clients (ChatGPT's connector card among
+    them) render a raster icon than an SVG one; the SVG follows as a crisp
+    vector fallback for clients that prefer it.
+
+    When ``base_url`` is given (the hosted cloud server), each icon is referenced
     by its public HTTPS URL - more widely supported by clients than a data URI.
-    Otherwise (the local stdio server, which has no HTTP host) it is inlined as
-    a self-contained SVG data URI.
+    Otherwise (the local stdio server, which has no HTTP host) they are inlined
+    as self-contained data URIs.
     """
     if base_url:
-        src = base_url.rstrip("/") + "/icon.svg"
+        root = base_url.rstrip("/")
+        png_src = root + "/icon.png"
+        svg_src = root + "/icon.svg"
     else:
-        src = icon_data_uri()
-    return [Icon(src=src, mimeType="image/svg+xml", sizes=["any"])]
+        png_src = icon_png_data_uri()
+        svg_src = icon_data_uri()
+    return [
+        Icon(src=png_src, mimeType="image/png", sizes=["512x512"]),
+        Icon(src=svg_src, mimeType="image/svg+xml", sizes=["any"]),
+    ]
 
 
 def _sdk_as_global() -> str:

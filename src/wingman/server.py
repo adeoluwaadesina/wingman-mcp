@@ -93,6 +93,7 @@ def build_server() -> FastMCP:
     mcp = FastMCP(
         name="wingman",
         icons=ui_resource.server_icons(),
+        website_url="https://github.com/adeoluwaadesina/wingman-mcp",
         instructions=(
             "Wingman is an interactive plan/to-do panel for this conversation. "
             "Use `create_plan` to start a named plan, `add_task` / `add_tasks` to "

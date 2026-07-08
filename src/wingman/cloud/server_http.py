@@ -308,6 +308,7 @@ def build_mcp(cfg: CloudConfig) -> FastMCP:
     mcp = FastMCP(
         name="wingman",
         icons=server_icons(cfg.base_url),
+        website_url="https://github.com/adeoluwaadesina/wingman-mcp",
         instructions=(
             "Wingman is an interactive plan/to-do panel for this conversation. "
             "Plans persist across messages and sync across your devices."
@@ -539,6 +540,17 @@ def build_app(cfg: CloudConfig, verifier, on_startup=None, userinfo_url=None) ->
             headers={"Cache-Control": "public, max-age=86400"},
         )
 
+    async def icon_png(request):
+        # PNG variant of the brand mark. Clients whose connector cards render a
+        # raster icon (ChatGPT among them) fetch this unauthenticated URL.
+        from starlette.responses import Response
+        from ..ui.resource import icon_png_bytes
+        return Response(
+            icon_png_bytes(),
+            media_type="image/png",
+            headers={"Cache-Control": "public, max-age=86400"},
+        )
+
     async def admin_stats(request):
         # Operator-only, content-free metrics. Guarded by ADMIN_TOKEN (constant
         # time compare); returns 404 when unset so the route is effectively off.
@@ -567,6 +579,7 @@ def build_app(cfg: CloudConfig, verifier, on_startup=None, userinfo_url=None) ->
         Route("/.well-known/oauth-protected-resource", well_known),
         Route("/healthz", healthz),
         Route("/icon.svg", icon_svg),
+        Route("/icon.png", icon_png),
         Route("/admin/stats", admin_stats),
     ]
     app = Starlette(routes=routes, lifespan=lifespan)
@@ -584,7 +597,7 @@ def build_app(cfg: CloudConfig, verifier, on_startup=None, userinfo_url=None) ->
     hardening.apply_inner(app, cfg)
     app.add_middleware(
         AuthMiddleware, verifier=verifier,
-        public_paths={"/healthz", "/icon.svg", "/.well-known/oauth-protected-resource", "/admin/stats"},
+        public_paths={"/healthz", "/icon.svg", "/icon.png", "/.well-known/oauth-protected-resource", "/admin/stats"},
         resource_metadata_url=f"{cfg.base_url}/.well-known/oauth-protected-resource",
         userinfo_url=userinfo_url,
     )
