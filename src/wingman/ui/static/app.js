@@ -49,6 +49,12 @@
   let currentPollMs = POLL_FAST_MS;
   let lastPolledSig = "";
   let cameFromPicker = false;
+  // The last navigation the HOST asked for via render data (a plan name, or the
+  // plans list). Claude fires render-data once per tool call; ChatGPT re-delivers
+  // the widget's bound tool output repeatedly (on re-render/focus/theme changes).
+  // We act on host render data only when this key CHANGES, so a re-delivered
+  // stale output can't yank the user out of the view they navigated to in-panel.
+  let lastHostNavKey = null;
 
   const stage = document.getElementById("stage");
   const $ = (sel) => stage.querySelector(sel);
@@ -1018,20 +1024,36 @@
   // bootstraps the panel; whichever arrives first wins.
   function ingestToolInput(params) {
     const args = params && params.arguments;
-    if (args && typeof args.plan_name === "string" && !currentPlanName) {
-      currentPlanName = args.plan_name;
-      stage.dataset.plan = args.plan_name;
-      refresh();
+    if (args && typeof args.plan_name === "string") {
+      const key = "plan:" + args.plan_name;
+      // Re-delivery of the same host navigation (ChatGPT re-emits): ignore it so
+      // it can't bounce the user back after they navigated away in-panel.
+      if (key === lastHostNavKey) return;
+      if (!currentPlanName) {
+        lastHostNavKey = key;
+        currentPlanName = args.plan_name;
+        stage.dataset.plan = args.plan_name;
+        refresh();
+      }
     }
   }
   function ingestToolResult(params) {
     if (params && params.isError) return;
     const payload = unwrap(params);
     if (payload && payload.plan) {
+      const key = "plan:" + payload.plan.name;
+      // Ignore a re-delivered show_plan output. Without this, ChatGPT's repeated
+      // re-emits force the panel back into this plan and clear cameFromPicker
+      // (hiding the back link) every couple of seconds. A genuinely new host
+      // navigation (different plan) has a different key and still applies.
+      if (key === lastHostNavKey) return;
+      lastHostNavKey = key;
       // Direct show_plan from Claude (not via picker click) - drop the back link.
       cameFromPicker = false;
       render(payload);
     } else if (payload && Array.isArray(payload.plans)) {
+      if (lastHostNavKey === "list") return;
+      lastHostNavKey = "list";
       currentPlanName = null;
       stage.dataset.plan = "";
       render(payload);
