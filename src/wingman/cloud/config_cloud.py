@@ -34,6 +34,10 @@ class CloudConfig:
     max_tasks_per_plan: int
     max_batch_size: int
     max_body_bytes: int
+    # Per-user requests/minute ceiling. The interactive panel polls (~24/min at
+    # 2.5s) on top of the user's actions, so this must sit well above that or
+    # normal editing trips a 429. Default 240 (4/s) still stops runaway loops.
+    rate_limit_per_min: int = 240
 
     @classmethod
     def from_env(cls) -> "CloudConfig":
@@ -51,4 +55,5 @@ class CloudConfig:
             max_tasks_per_plan=_int_env("MAX_TASKS_PER_PLAN", 500),
             max_batch_size=_int_env("MAX_BATCH_SIZE", 50),
             max_body_bytes=_int_env("MAX_BODY_BYTES", 256 * 1024),
+            rate_limit_per_min=_int_env("RATE_LIMIT_PER_MIN", 240),
         )

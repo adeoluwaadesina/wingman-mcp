@@ -25,6 +25,14 @@ def test_defaults_applied(monkeypatch):
     assert cfg.max_tasks_per_plan == 500
     assert cfg.max_batch_size == 50
     assert cfg.max_body_bytes == 256 * 1024
+    assert cfg.rate_limit_per_min == 240
+
+
+def test_rate_limit_override(monkeypatch):
+    for k, v in REQUIRED.items():
+        monkeypatch.setenv(k, v)
+    monkeypatch.setenv("RATE_LIMIT_PER_MIN", "600")
+    assert CloudConfig.from_env().rate_limit_per_min == 600
 
 def test_quota_override(monkeypatch):
     for k, v in REQUIRED.items():

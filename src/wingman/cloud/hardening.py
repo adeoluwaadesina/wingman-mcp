@@ -92,7 +92,7 @@ def apply_inner(app, cfg) -> None:
     """Add inner hardening middlewares (security headers, rate limit).
     Must be called BEFORE AuthMiddleware is added so auth runs outside these."""
     app.add_middleware(SecurityHeadersMiddleware)
-    app.add_middleware(RateLimitMiddleware, limiter=RateLimiter(60))
+    app.add_middleware(RateLimitMiddleware, limiter=RateLimiter(cfg.rate_limit_per_min))
 
 
 def apply_outer(app, cfg) -> None:
