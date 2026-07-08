@@ -37,8 +37,31 @@ async def test_global_stats_is_content_free_counts(pg_pool):
     # No content/name/email keys are present in the metrics payload.
     assert set(s) == {
         "total_users", "total_plans", "total_tasks",
-        "completed_tasks", "pending_tasks", "avg_hours_to_complete",
+        "completed_tasks", "pending_tasks", "avg_hours_to_complete", "clients",
     }
+    # clients is a content-free {label: count} breakdown.
+    assert isinstance(s["clients"], dict)
+
+
+async def test_last_client_captured_and_counted(pg_pool):
+    await store_pg.upsert_user("u_gpt", None, None, client="ChatGPT", user_agent="openai-mcp/1.0")
+    await store_pg.upsert_user("u_claude", None, None, client="Claude", user_agent="claude-ai/2.1")
+    # A later request with no UA must not wipe a previously-known client.
+    await store_pg.upsert_user("u_gpt", None, None, client=None, user_agent=None)
+
+    s = await store_pg.global_stats()
+    assert s["clients"].get("ChatGPT") == 1
+    assert s["clients"].get("Claude") == 1
+
+
+def test_classify_client_maps_known_agents():
+    c = server_http.classify_client
+    assert c("Claude/1.0 (Anthropic)") == "Claude"
+    assert c("openai-mcp/0.3") == "ChatGPT"
+    assert c("Cursor/0.42") == "Cursor"
+    assert c("python-httpx/0.27") == "Other"
+    assert c(None) is None
+    assert c("") is None
 
 
 def test_admin_stats_404_when_token_unset(monkeypatch):

@@ -43,6 +43,10 @@ If you connect to the hosted Wingman service, the following applies.
   your data separate from other users'.
 - **Your content.** The plans, tasks, task statuses, and ordering you create
   through Wingman.
+- **Connection metadata.** The app you connect from (for example, Claude or
+  ChatGPT), derived from your client's User-Agent. This is operational, tells us
+  nothing about your conversations, and is used only to understand which clients
+  Wingman is used with.
 
 We do **not** collect the contents of your AI conversations. Wingman only receives
 the specific plan and task actions you or the assistant invoke.

@@ -33,3 +33,11 @@ CREATE TABLE IF NOT EXISTS tasks (
 );
 
 CREATE INDEX IF NOT EXISTS idx_tasks_plan ON tasks(user_id, plan_name, sort_order);
+
+-- Client tracking (content-free): which app/LLM the user last connected with,
+-- derived from the HTTP User-Agent. `last_client` is a friendly label
+-- (e.g. 'Claude', 'ChatGPT'); `last_user_agent` keeps the raw string so the
+-- label mapping can be refined later. Added via ADD COLUMN IF NOT EXISTS so
+-- this file stays safe to re-apply on every startup.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS last_client     TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS last_user_agent TEXT;

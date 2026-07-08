@@ -442,6 +442,33 @@ from . import hardening
 log = logging.getLogger("wingman.cloud")
 
 
+def classify_client(user_agent: str | None) -> str | None:
+    """Map an HTTP User-Agent to a friendly client/LLM label.
+
+    Best-effort and content-free: it identifies the connecting app, not the
+    user. Returns None when no UA is present, or 'Other' for an unrecognized
+    one (the raw UA is stored alongside so the mapping can be refined later).
+    """
+    if not user_agent:
+        return None
+    ua = user_agent.lower()
+    if "claude" in ua or "anthropic" in ua:
+        return "Claude"
+    if "openai" in ua or "chatgpt" in ua:
+        return "ChatGPT"
+    if "cursor" in ua:
+        return "Cursor"
+    if "windsurf" in ua:
+        return "Windsurf"
+    if "cline" in ua:
+        return "Cline"
+    if "vscode" in ua or "visual studio code" in ua or "copilot" in ua:
+        return "VS Code"
+    if "python-httpx" in ua or "node" in ua or "python-requests" in ua:
+        return "Other"
+    return "Other"
+
+
 class AuthMiddleware(BaseHTTPMiddleware):
     def __init__(self, app, verifier, public_paths, resource_metadata_url=None, userinfo_url=None):
         super().__init__(app)
@@ -503,9 +530,11 @@ class AuthMiddleware(BaseHTTPMiddleware):
                     or name
                 ) or None
             self._enriched.add(uid)
+        ua = request.headers.get("user-agent")
+        client = classify_client(ua)
         tok = identity.set_current_user(uid, email, name)
         try:
-            await store_pg.upsert_user(uid, email, name)
+            await store_pg.upsert_user(uid, email, name, client=client, user_agent=ua)
             return await call_next(request)
         finally:
             identity.reset(tok)

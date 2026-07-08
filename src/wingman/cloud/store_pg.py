@@ -64,19 +64,27 @@ from ..storage.models import Plan, Task, validate_plan_name
 from ..tools import plan_tools  # reuse plan_to_dict / list serialization
 
 
-async def upsert_user(user_id: str, email: str | None, display_name: str | None) -> None:
+async def upsert_user(
+    user_id: str,
+    email: str | None,
+    display_name: str | None,
+    client: str | None = None,
+    user_agent: str | None = None,
+) -> None:
     pool = get_pool()
     async with pool.acquire() as conn:
         await conn.execute(
             """
-            INSERT INTO users (user_id, email, display_name, last_seen_at)
-            VALUES ($1, $2, $3, now())
+            INSERT INTO users (user_id, email, display_name, last_client, last_user_agent, last_seen_at)
+            VALUES ($1, $2, $3, $4, $5, now())
             ON CONFLICT (user_id) DO UPDATE
               SET email = COALESCE(EXCLUDED.email, users.email),
                   display_name = COALESCE(EXCLUDED.display_name, users.display_name),
+                  last_client = COALESCE(EXCLUDED.last_client, users.last_client),
+                  last_user_agent = COALESCE(EXCLUDED.last_user_agent, users.last_user_agent),
                   last_seen_at = now()
             """,
-            user_id, email, display_name,
+            user_id, email, display_name, client, user_agent,
         )
 
 
@@ -460,6 +468,14 @@ async def global_stats() -> dict:
                  FROM tasks WHERE status = 'done' AND completed_at IS NOT NULL) AS avg_hours_to_complete
             """
         )
+        client_rows = await conn.fetch(
+            """
+            SELECT COALESCE(last_client, 'Unknown') AS client, count(*) AS n
+              FROM users
+             GROUP BY COALESCE(last_client, 'Unknown')
+             ORDER BY n DESC
+            """
+        )
     avg = row["avg_hours_to_complete"]
     return {
         "total_users": int(row["total_users"]),
@@ -468,4 +484,5 @@ async def global_stats() -> dict:
         "completed_tasks": int(row["completed_tasks"]),
         "pending_tasks": int(row["pending_tasks"]),
         "avg_hours_to_complete": round(float(avg), 2) if avg is not None else None,
+        "clients": {r["client"]: int(r["n"]) for r in client_rows},
     }

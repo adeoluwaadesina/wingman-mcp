@@ -33,8 +33,8 @@ def _app(monkeypatch, resource_metadata_url=None):
 def test_userinfo_enriches_email_and_name(monkeypatch):
     captured = {}
 
-    async def _capture_upsert(uid, email, name):
-        captured.update(uid=uid, email=email, name=name)
+    async def _capture_upsert(uid, email, name, client=None, user_agent=None):
+        captured.update(uid=uid, email=email, name=name, client=client, user_agent=user_agent)
 
     async def _fake_userinfo(url, token):
         return {"email": "real@example.com", "name": "Real Name"}
