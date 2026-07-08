@@ -206,10 +206,18 @@ show a plan.
 **2. Add Wingman as a connector**
 
 1. Back on **Apps & Connectors**, click **Create** (add custom connector).
-2. Fill in:
+2. Fill in the fields. Unlike Claude, ChatGPT asks you to set the icon and
+   description by hand:
    - **Name:** `Wingman`
    - **MCP Server URL:** `https://wingman-mcp.onrender.com/mcp`
    - **Authentication:** OAuth
+   - **Icon:** download [`docs/assets/wingman-icon.png`](docs/assets/wingman-icon.png)
+     and upload it.
+   - **Description:** paste
+     > Wingman gives your chat a persistent, interactive plan and to-do panel.
+     > Create named plans, add and tick off tasks, mark work in progress, and
+     > track it all on a live panel. Plans sync across your devices and
+     > assistants, so a plan you start here is there in Claude too.
 3. Save, then sign in with Google or email when the OAuth window opens. You only
    do this once per device.
 
