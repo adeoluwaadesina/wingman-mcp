@@ -158,11 +158,15 @@ pip install wingman-mcp
 
 Works on Windows, macOS, and Linux. Requires Python 3.10+.
 
+<br/>
+
+---
+
 ### Configure
 
 Add Wingman to your MCP host config and restart. One block, one restart.
 
-#### Claude Desktop
+### Claude Desktop
 
 First, install with pipx for the simplest setup:
 
@@ -197,7 +201,7 @@ If you installed with `pip` instead, use the full Python path. Find it by runnin
 }
 ```
 
-#### Cursor
+### Cursor
 
 `.cursor/mcp.json` in your project root, or `~/.cursor/mcp.json` globally:
 
@@ -212,7 +216,7 @@ If you installed with `pip` instead, use the full Python path. Find it by runnin
 }
 ```
 
-#### VS Code Copilot Chat
+### VS Code Copilot Chat
 
 `.vscode/mcp.json`:
 
@@ -228,7 +232,7 @@ If you installed with `pip` instead, use the full Python path. Find it by runnin
 }
 ```
 
-#### Claude Code (CLI)
+### Claude Code (CLI)
 
 Register Wingman once at user scope and it's available in every project:
 
