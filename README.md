@@ -21,22 +21,6 @@ _Sits beside you. Doesn't fly the plane._
 
 ---
 
-> ### Get started in 10 seconds
->
-> No install. In Claude or ChatGPT, open **Settings → Connectors → Add
-> custom connector** and paste:
->
-> ```text
-> https://wingman-mcp.onrender.com/mcp
-> ```
->
-> Sign in, and you're connected. Full steps below in
-> [Wingman Cloud](#wingman-cloud-hosted-sync-across-devices).
-
-<br/>
-
----
-
 ## What is Wingman?
 
 Long Claude conversations lose track of what you were doing, what's done, and what's next. Wingman fixes that.
@@ -44,37 +28,6 @@ Long Claude conversations lose track of what you were doing, what's done, and wh
 It gives every Claude conversation a **persistent, interactive plan panel** - rendered inline as a live UI widget. You click checkboxes. Claude ticks tasks after completing work. Either of you can add, reorder, or rename tasks at any time. The plan survives conversation restarts and lives in local SQLite on your machine.
 
 Think of it as Cursor's plan agent, generalized to any AI conversation and any goal.
-
-<br/>
-
----
-
-## Wingman Cloud (hosted, sync across devices)
-
-Wingman Cloud is the hosted version: your plans live in one place and sync across
-every device and assistant - Claude desktop, web, and mobile, and ChatGPT - so a
-plan you build on your laptop is right there on your phone.
-
-**Connect it (one time):**
-
-1. In Claude, open **Settings -> Connectors -> Add custom connector** (on ChatGPT,
-   add it as a custom MCP connector).
-2. Enter the server URL:
-
-   ```text
-   https://wingman-mcp.onrender.com/mcp
-   ```
-
-3. A browser window opens to sign in with Google or email. Approve it, and you are
-   connected. You only do this once per device; you stay signed in afterward.
-
-That's it - create a plan on one device and it shows up on the others. The
-interactive panel renders where the host supports it (Claude desktop and ChatGPT
-today), and the clean text view is used everywhere else.
-
-> Wingman Cloud is in early hosted beta. The local `pip install wingman` stays
-> fully supported and zero-telemetry; the hosted service adds accounts and
-> cross-device sync (see Security & privacy below).
 
 <br/>
 
@@ -198,6 +151,37 @@ _26 pending_
 ```
 
 > **Note:** The interactive panel requires a host with MCP Apps support (SEP-1865). Claude Desktop and MCPJam render it fully. Claude Code (CLI), Cursor, and VS Code Copilot Chat receive the clean text view shown above - all tools still work.
+
+<br/>
+
+---
+
+## Wingman Cloud (hosted, sync across devices)
+
+Wingman Cloud is the hosted version: your plans live in one place and sync across
+every device and assistant - Claude desktop, web, and mobile, and ChatGPT - so a
+plan you build on your laptop is right there on your phone.
+
+**Connect it (one time):**
+
+1. In Claude, open **Settings -> Connectors -> Add custom connector** (on ChatGPT,
+   add it as a custom MCP connector).
+2. Enter the server URL:
+
+   ```text
+   https://wingman-mcp.onrender.com/mcp
+   ```
+
+3. A browser window opens to sign in with Google or email. Approve it, and you are
+   connected. You only do this once per device; you stay signed in afterward.
+
+That's it - create a plan on one device and it shows up on the others. The
+interactive panel renders where the host supports it (Claude desktop and ChatGPT
+today), and the clean text view is used everywhere else.
+
+> Wingman Cloud is in early hosted beta. The local `pip install wingman` stays
+> fully supported and zero-telemetry; the hosted service adds accounts and
+> cross-device sync (see Security & privacy below).
 
 <br/>
 
