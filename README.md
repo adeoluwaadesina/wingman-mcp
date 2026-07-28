@@ -93,6 +93,63 @@ today), and the clean text view is used everywhere else.
 
 ---
 
+## Use Wingman in ChatGPT
+
+ChatGPT can connect to Wingman Cloud as a custom MCP connector. Tools work
+immediately, and the interactive panel renders inline when you ask ChatGPT to
+show a plan.
+
+> Requires a ChatGPT **Plus, Pro, Business, or Enterprise/Edu** account on
+> **web** (Developer Mode is not available on the mobile apps).
+
+**1. Turn on Developer Mode**
+
+1. Click your profile picture (bottom-left) -> **Settings**.
+2. Open **Apps & Connectors** in the left rail.
+3. Scroll to the bottom, open **Advanced settings**, and toggle **Developer
+   mode** on. (Shortcut once you are in ChatGPT: `Ctrl` + `.`)
+
+**2. Add Wingman as a connector**
+
+1. Back on **Apps & Connectors**, click **Create** (add custom connector).
+2. Fill in the fields. Unlike Claude, ChatGPT asks you to set the icon and
+   description by hand:
+   - **Name:** `Wingman`
+   - **MCP Server URL:** `https://wingman-mcp.onrender.com/mcp`
+   - **Authentication:** OAuth
+   - **Icon:** download [`docs/assets/wingman-icon.png`](docs/assets/wingman-icon.png)
+     and upload it.
+   - **Description:** paste
+     > Wingman gives your chat a persistent, interactive plan and to-do panel.
+     > Create named plans, add and tick off tasks, mark work in progress, and
+     > track it all on a live panel. Plans sync across your devices and
+     > assistants, so a plan you start here is there in Claude too.
+3. Save, then sign in with Google or email when the OAuth window opens. You only
+   do this once per device.
+
+**3. Use it**
+
+Start a **new chat** (Developer Mode tools only appear in chats opened after you
+connect), then try:
+
+> Use Wingman to create a plan called "Launch" with three tasks: draft, review,
+> ship. Then show me the plan.
+
+The plan syncs with the same account you use in Claude, so anything you build in
+ChatGPT is on your other devices too.
+
+> First call after an idle spell can take a few seconds - the hosted service runs
+> on a free tier that sleeps when idle, then wakes and is fast.
+
+<br/>
+
+---
+
+## Want it fully local and self-hosted instead?
+
+Wingman also ships as a local MCP server you install and run yourself - no
+account, no network calls, plans stored in local SQLite on your machine.
+
 ## Install
 
 ```bash
@@ -198,58 +255,6 @@ _26 pending_
 ```
 
 > **Note:** The interactive panel requires a host with MCP Apps support (SEP-1865). Claude Desktop and MCPJam render it fully. Claude Code (CLI), Cursor, and VS Code Copilot Chat receive the clean text view shown above - all tools still work.
-
-<br/>
-
----
-
-## Use Wingman in ChatGPT
-
-ChatGPT can connect to Wingman Cloud as a custom MCP connector. Tools work
-immediately, and the interactive panel renders inline when you ask ChatGPT to
-show a plan.
-
-> Requires a ChatGPT **Plus, Pro, Business, or Enterprise/Edu** account on
-> **web** (Developer Mode is not available on the mobile apps).
-
-**1. Turn on Developer Mode**
-
-1. Click your profile picture (bottom-left) -> **Settings**.
-2. Open **Apps & Connectors** in the left rail.
-3. Scroll to the bottom, open **Advanced settings**, and toggle **Developer
-   mode** on. (Shortcut once you are in ChatGPT: `Ctrl` + `.`)
-
-**2. Add Wingman as a connector**
-
-1. Back on **Apps & Connectors**, click **Create** (add custom connector).
-2. Fill in the fields. Unlike Claude, ChatGPT asks you to set the icon and
-   description by hand:
-   - **Name:** `Wingman`
-   - **MCP Server URL:** `https://wingman-mcp.onrender.com/mcp`
-   - **Authentication:** OAuth
-   - **Icon:** download [`docs/assets/wingman-icon.png`](docs/assets/wingman-icon.png)
-     and upload it.
-   - **Description:** paste
-     > Wingman gives your chat a persistent, interactive plan and to-do panel.
-     > Create named plans, add and tick off tasks, mark work in progress, and
-     > track it all on a live panel. Plans sync across your devices and
-     > assistants, so a plan you start here is there in Claude too.
-3. Save, then sign in with Google or email when the OAuth window opens. You only
-   do this once per device.
-
-**3. Use it**
-
-Start a **new chat** (Developer Mode tools only appear in chats opened after you
-connect), then try:
-
-> Use Wingman to create a plan called "Launch" with three tasks: draft, review,
-> ship. Then show me the plan.
-
-The plan syncs with the same account you use in Claude, so anything you build in
-ChatGPT is on your other devices too.
-
-> First call after an idle spell can take a few seconds - the hosted service runs
-> on a free tier that sleeps when idle, then wakes and is fast.
 
 <br/>
 
