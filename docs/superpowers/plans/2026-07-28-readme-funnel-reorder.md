@@ -10,7 +10,7 @@
 
 ## Global Constraints
 
-- No content may be deleted; every existing section must still be present after the reorder (source: spec "Change," point 5-6).
+- No content may be deleted — every existing section must still be present after the reorder (source: spec "Change," point 5-6).
 - No code changes, no changes to the Cloud connect flow, install process, or dev.to drafts (source: spec "Out of scope").
 - Final order after the hero must be: CTA callout → "What is Wingman?" → Wingman Cloud section → remaining sections (source: spec "Success criteria").
 - `pip install` / "Configure" sections must appear after the Cloud section, reframed with a "want it local instead?" style lead-in (source: spec "Change," point 6).
@@ -89,7 +89,7 @@ Reinsert it immediately after the "What is Wingman?" section's closing `---` (cu
 - [ ] **Step 3: Verify structure with a heading scan**
 
 Run: `grep -n '^## ' README.md`
-Expected: first three `##`/`>` headings after the hero are, in order: the "Get started in 10 seconds" callout, `## What is Wingman?`, `## Wingman Cloud (hosted, sync across devices)`, followed by `## New in v0.3` and the rest unchanged.
+Expected: first three `##`/`>` headings after the hero are, in order — the "Get started in 10 seconds" callout, `## What is Wingman?`, `## Wingman Cloud (hosted, sync across devices)` — followed by `## New in v0.3` and the rest unchanged.
 
 - [ ] **Step 4: Verify nothing was deleted**
 
@@ -135,7 +135,7 @@ account, no network calls, plans stored in local SQLite on your machine.
 - [ ] **Step 3: Verify final section order**
 
 Run: `grep -n '^## ' README.md`
-Expected order of top-level `##` headings: `What is Wingman?`, `Wingman Cloud (hosted, sync across devices)`, `New in v0.3`, `Use Wingman in ChatGPT`, `Want it fully local and self-hosted instead?`, `Install`, `Configure`, `How it works`, `Screenshots`, `Tool reference`, `Use as an agent skill`, `Architecture`, `Security & privacy`, `vs. alternatives`, `Known limitations in v0.3`, `Roadmap`, `Development troubleshooting`, `Contributing`, `License`. Every original heading is still present, with only Install/Configure relocated and one new heading added.
+Expected order of top-level `##` headings: `What is Wingman?`, `Wingman Cloud (hosted, sync across devices)`, `New in v0.3`, `Use Wingman in ChatGPT`, `Want it fully local and self-hosted instead?`, `Install`, `Configure`, `How it works`, `Screenshots`, `Tool reference`, `Use as an agent skill`, `Architecture`, `Security & privacy`, `vs. alternatives`, `Known limitations in v0.3`, `Roadmap`, `Development troubleshooting`, `Contributing`, `License` — i.e. every original heading still present, with only Install/Configure relocated and one new heading added.
 
 - [ ] **Step 4: Verify nothing was deleted**
 
