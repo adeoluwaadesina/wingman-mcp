@@ -41,7 +41,7 @@ _Sits beside you. Doesn't fly the plane._
 
 Long Claude conversations lose track of what you were doing, what's done, and what's next. Wingman fixes that.
 
-It gives every Claude conversation a **persistent, interactive plan panel** - rendered inline as a live UI widget. You click checkboxes. Claude ticks tasks after completing work. Either of you can add, reorder, or rename tasks at any time. The plan survives conversation restarts and lives in local SQLite on your machine, or in Wingman Cloud synced across every device.
+It gives every Claude conversation a **persistent, interactive plan panel** - rendered inline as a live UI widget. You click checkboxes. Claude ticks tasks after completing work. Either of you can add, reorder, or rename tasks at any time. The plan survives conversation restarts and lives in local SQLite on your machine.
 
 Think of it as Cursor's plan agent, generalized to any AI conversation and any goal.
 
@@ -150,7 +150,7 @@ ChatGPT is on your other devices too.
 Wingman also ships as a local MCP server you install and run yourself - no
 account, no network calls, plans stored in local SQLite on your machine.
 
-### Install
+## Install
 
 ```bash
 pip install wingman-mcp
@@ -162,7 +162,7 @@ Works on Windows, macOS, and Linux. Requires Python 3.10+.
 
 ---
 
-### Configure
+## Configure
 
 Add Wingman to your MCP host config and restart. One block, one restart.
 
@@ -466,7 +466,7 @@ Once installed, any MCP-compatible agent can call Wingman's plan management tool
 
 - **No telemetry. No phone-home. No network calls anywhere.** Wingman is a local state-tracking server. Zero outbound connections on any tool path - audited and tested.
 - **Local-only by default.** stdio transport. Your plans live on your machine.
-- **Local vs Cloud.** The no-telemetry guarantee above covers the local `pip install` product, which stays zero-network. The hosted **Wingman Cloud** service (live, opt-in) is a separate deployment: it stores plans in Postgres (Neon) and uses server-side analytics (Sentry, PostHog) purely to operate the service. It never logs plan or task content. Using the local install never touches any of that.
+- **Local vs Cloud.** The no-telemetry guarantee above covers the local `pip install` product, which stays zero-network. The forthcoming hosted **Wingman Cloud** service (in active development) is a separate, opt-in deployment: it stores plans in Postgres (Neon) and uses server-side analytics (Sentry, PostHog) purely to operate the service. It never logs plan or task content. Using the local install never touches any of that.
 - **Sandboxed UI.** The panel runs in a host-sandboxed iframe with a strict CSP (`connect-src 'self'`). No cross-origin access.
 - **Parameterized SQL throughout.** No string-built queries. Validated via full test suite.
 - **Path-traversal safe.** Plan names are allow-list validated - letters, digits, space, hyphen, underscore, apostrophe, period, colon, parentheses. Slashes, backslashes, `..` sequences, null bytes, newlines, and tabs are blocked.
