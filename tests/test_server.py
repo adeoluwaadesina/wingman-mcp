@@ -30,13 +30,13 @@ async def test_panel_resource_is_enumerable():
     uris = {str(r.uri) for r in resources}
     assert PANEL_URI in uris, f"{PANEL_URI} not in resources/list: {uris}"
     panel = next(r for r in resources if str(r.uri) == PANEL_URI)
-    assert panel.mimeType == MCP_UI_MIME_TYPE
+    assert panel.mime_type == MCP_UI_MIME_TYPE
 
 
 async def test_panel_resource_is_not_a_template():
     mcp = build_server()
     templates = await mcp.list_resource_templates()
-    template_uris = {t.uriTemplate for t in templates}
+    template_uris = {t.uri_template for t in templates}
     # No parameterized panel template should exist.
     assert not any("wingman/panel" in u for u in template_uris), template_uris
 
@@ -173,7 +173,7 @@ async def test_show_plan_call_emits_top_level_meta():
     assert result.meta is not None, "show_plan dropped _meta"
     assert result.meta["ui"]["resourceUri"] == PANEL_URI
     assert result.meta["ui/resourceUri"] == PANEL_URI
-    assert result.structuredContent and result.structuredContent.get("plan", {}).get("name") == "regress"
+    assert result.structured_content and result.structured_content.get("plan", {}).get("name") == "regress"
 
 
 def test_panel_html_carries_build_marker():
@@ -213,6 +213,6 @@ async def test_show_plans_call_emits_top_level_meta_with_plans_payload():
     result = await mcp.call_tool("show_plans", {})
     assert isinstance(result, CallToolResult), type(result).__name__
     assert result.meta is not None and result.meta["ui"]["resourceUri"] == PANEL_URI
-    assert isinstance(result.structuredContent.get("plans"), list)
-    names = {p["name"] for p in result.structuredContent["plans"]}
+    assert isinstance(result.structured_content.get("plans"), list)
+    names = {p["name"] for p in result.structured_content["plans"]}
     assert {"alpha", "beta"}.issubset(names)

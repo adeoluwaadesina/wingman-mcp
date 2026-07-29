@@ -19,10 +19,12 @@ import time
 
 import pytest
 
+import httpx2
 from mcp import ClientSession
-# The headers-accepting client entry point (the renamed streamable_http_client
-# has a different signature); silence its one deprecation notice below.
-from mcp.client.streamable_http import streamablehttp_client
+# mcp 2.0.0 renamed streamablehttp_client -> streamable_http_client and moved
+# header configuration onto an httpx2.AsyncClient passed as http_client=
+# (the function itself no longer accepts headers= directly).
+from mcp.client.streamable_http import streamable_http_client
 
 from wingman.cloud import auth, server_http, store_pg
 from wingman.cloud.config_cloud import CloudConfig
@@ -31,7 +33,6 @@ from wingman.cloud.server_http import LLM_TOOL_NAMES
 DSN = os.environ.get("WINGMAN_TEST_DSN")
 pytestmark = [
     pytest.mark.skipif(not DSN, reason="set WINGMAN_TEST_DSN to run the HTTP smoke test"),
-    pytest.mark.filterwarnings("ignore:Use `streamable_http_client`:DeprecationWarning"),
 ]
 
 
@@ -113,7 +114,8 @@ async def test_end_to_end_round_trip_and_isolation():
 
     with _running_server(app, port):
         # ---- Alice: a full authenticated round trip ----
-        async with streamablehttp_client(base, headers={"Authorization": "Bearer alice-token"}) as (r, w, _):
+        alice_client = httpx2.AsyncClient(headers={"Authorization": "Bearer alice-token"})
+        async with streamable_http_client(base, http_client=alice_client) as (r, w):
             async with ClientSession(r, w) as session:
                 await session.initialize()
 
@@ -122,19 +124,20 @@ async def test_end_to_end_round_trip_and_isolation():
                 assert LLM_TOOL_NAMES <= names, f"missing tools: {LLM_TOOL_NAMES - names}"
 
                 created = await session.call_tool("create_plan", {"name": "SmokePlan", "tasks": ["a", "b"]})
-                assert not created.isError, _text(created)
+                assert not created.is_error, _text(created)
 
                 got = await session.call_tool("get_plan", {"plan_name": "SmokePlan"})
-                assert not got.isError, _text(got)
+                assert not got.is_error, _text(got)
                 # identity propagated -> Alice's plan carries her two tasks
                 assert "a" in _text(got) and "b" in _text(got)
 
         # ---- Bob: cannot see Alice's plan (isolation over the wire) ----
-        async with streamablehttp_client(base, headers={"Authorization": "Bearer bob-token"}) as (r, w, _):
+        bob_client = httpx2.AsyncClient(headers={"Authorization": "Bearer bob-token"})
+        async with streamable_http_client(base, http_client=bob_client) as (r, w):
             async with ClientSession(r, w) as session:
                 await session.initialize()
                 bob_view = await session.call_tool("get_plan", {"plan_name": "SmokePlan"})
-                assert bob_view.isError, "Bob must not be able to read Alice's plan"
+                assert bob_view.is_error, "Bob must not be able to read Alice's plan"
 
 
 async def test_unauthenticated_request_is_rejected():

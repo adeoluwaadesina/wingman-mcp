@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from mcp.server.fastmcp import FastMCP
+from mcp.server.mcpserver import MCPServer
 from mcp.types import CallToolResult, TextContent, ToolAnnotations
 
 from . import identity, store_pg
@@ -147,7 +147,7 @@ async def tool_show_plans() -> CallToolResult:
 # Panel tool registration (show_plan + show_plans, same binding as local)
 # ---------------------------------------------------------------------------
 
-def _register_panel_tools(mcp: FastMCP, cfg: CloudConfig) -> None:
+def _register_panel_tools(mcp: MCPServer, cfg: CloudConfig) -> None:
     @mcp.tool(
         meta=SHOW_PLAN_META,
         description="Render a plan as an interactive panel inline in the conversation.",
@@ -176,7 +176,7 @@ def _register_panel_tools(mcp: FastMCP, cfg: CloudConfig) -> None:
 # Panel resource + app-only _ui_* tools (the interactive iframe calls these)
 # ---------------------------------------------------------------------------
 
-def _register_ui_tools(mcp: FastMCP, cfg: CloudConfig) -> None:
+def _register_ui_tools(mcp: MCPServer, cfg: CloudConfig) -> None:
     """Serve the panel HTML resource and the 14 app-only tools the iframe uses.
 
     Same names/shapes as the local server so the bundled panel JS works, but
@@ -282,41 +282,22 @@ def _register_ui_tools(mcp: FastMCP, cfg: CloudConfig) -> None:
 # MCP app builder
 # ---------------------------------------------------------------------------
 
-def build_mcp(cfg: CloudConfig) -> FastMCP:
-    """Return a FastMCP instance with all 12 LLM-visible tools registered.
+def build_mcp(cfg: CloudConfig) -> MCPServer:
+    """Return an MCPServer instance with all 12 LLM-visible tools registered.
 
     Tool signatures match the local server exactly so existing clients see an
     unchanged Wingman. Panel tools (show_plan, show_plans) carry the same
     _meta / resourceUri as local so the iframe mounts identically.
     """
-    # DNS-rebinding protection validates the Host header against an allow-list.
-    # The default permits localhost but not our deployment host, so a request
-    # behind Render (Host: <app>.onrender.com) is rejected with 421. Allow the
-    # host derived from WINGMAN_BASE_URL, plus localhost (wildcard port) for the
-    # smoke test, plus any extra hosts from ALLOWED_HOSTS.
-    from urllib.parse import urlparse
-    from mcp.server.transport_security import TransportSecuritySettings
-
-    base_host = urlparse(cfg.base_url).netloc
-    allowed_hosts = ["127.0.0.1:*", "localhost:*"]
-    if base_host:
-        allowed_hosts.append(base_host)
-    allowed_hosts += [h.strip() for h in os.environ.get("ALLOWED_HOSTS", "").split(",") if h.strip()]
-
     from ..ui.resource import server_icons
 
-    mcp = FastMCP(
+    mcp = MCPServer(
         name="wingman",
         icons=server_icons(cfg.base_url),
         website_url="https://github.com/adeoluwaadesina/wingman-mcp",
         instructions=(
             "Wingman is an interactive plan/to-do panel for this conversation. "
             "Plans persist across messages and sync across your devices."
-        ),
-        transport_security=TransportSecuritySettings(
-            enable_dns_rebinding_protection=True,
-            allowed_hosts=allowed_hosts,
-            allowed_origins=cfg.allowed_origins,
         ),
     )
 
@@ -546,9 +527,37 @@ class AuthMiddleware(BaseHTTPMiddleware):
 
 def build_app(cfg: CloudConfig, verifier, on_startup=None, userinfo_url=None) -> Starlette:
     from contextlib import asynccontextmanager
+    from urllib.parse import urlparse
+
+    from mcp.server.transport_security import TransportSecuritySettings
 
     mcp = build_mcp(cfg)
-    mcp_app = mcp.streamable_http_app()  # ASGI sub-app
+
+    # DNS-rebinding protection validates the Host header against an allow-list.
+    # The default permits localhost but not our deployment host, so a request
+    # behind Render (Host: <app>.onrender.com) is rejected with 421. Allow the
+    # host derived from WINGMAN_BASE_URL, plus localhost (wildcard port) for the
+    # smoke test, plus any extra hosts from ALLOWED_HOSTS.
+    base_host = urlparse(cfg.base_url).netloc
+    allowed_hosts = ["127.0.0.1:*", "localhost:*"]
+    if base_host:
+        allowed_hosts.append(base_host)
+    allowed_hosts += [h.strip() for h in os.environ.get("ALLOWED_HOSTS", "").split(",") if h.strip()]
+
+    # mcp 2.0.0 (spec 2026-07-28): transport_security moved from the MCPServer
+    # constructor to streamable_http_app(); stateless_http opts into the new
+    # spec's session-less request model (no Mcp-Session-Id, no sticky routing
+    # requirement). Wingman's own identity handling already reads the bearer
+    # token fresh per request (see AuthMiddleware below), so this needed no
+    # changes to our own request-handling logic.
+    mcp_app = mcp.streamable_http_app(
+        transport_security=TransportSecuritySettings(
+            enable_dns_rebinding_protection=True,
+            allowed_hosts=allowed_hosts,
+            allowed_origins=cfg.allowed_origins,
+        ),
+        stateless_http=True,
+    )  # ASGI sub-app
 
     async def well_known(request):
         return JSONResponse(auth_mod.resource_metadata(

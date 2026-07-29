@@ -14,7 +14,7 @@ from __future__ import annotations
 import logging
 from typing import Annotated, Any, Literal
 
-from mcp.server.fastmcp import FastMCP
+from mcp.server.mcpserver import MCPServer
 from mcp.types import CallToolResult, TextContent, ToolAnnotations
 from pydantic import Field
 
@@ -89,8 +89,8 @@ def _panel_result_meta() -> dict[str, Any]:
     }
 
 
-def build_server() -> FastMCP:
-    mcp = FastMCP(
+def build_server() -> MCPServer:
+    mcp = MCPServer(
         name="wingman",
         icons=ui_resource.server_icons(),
         website_url="https://github.com/adeoluwaadesina/wingman-mcp",
@@ -149,7 +149,7 @@ def build_server() -> FastMCP:
     def show_plan(plan_name: PlanName) -> CallToolResult:
         # Return CallToolResult directly so `_meta` lands at the CallToolResult
         # top level — that's where MCP-Apps hosts read `ui.resourceUri` from
-        # (per SEP-1865). If we returned a plain dict, FastMCP would shove the
+        # (per SEP-1865). If we returned a plain dict, MCPServer would shove the
         # whole thing (including any `_meta` key) into `structuredContent`,
         # and hosts would never see the resource pointer.
         result = plan_tools.show_plan(plan_name)
