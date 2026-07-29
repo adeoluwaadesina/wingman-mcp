@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wingman — a persistent, interactive plan panel for your AI chat</title>
+<meta name="description" content="Wingman gives Claude and ChatGPT a persistent, interactive plan panel. Connect Wingman Cloud in seconds, no install.">
+<link rel="icon" href="assets/wingman-icon.png">
+<link rel="stylesheet" href="site.css">
+</head>
+<body>
+
+<div class="wrap topbar">
+  <div class="brand"><img src="assets/wingman-icon.png" alt=""><span>WINGMAN</span></div>
+  <nav>
+    <a href="#how-it-works">How it works</a>
+    <a href="#features">Features</a>
+    <a href="https://github.com/adeoluwaadesina/wingman-mcp">GitHub</a>
+  </nav>
+</div>
+
+<div class="wrap hero">
+  <div class="left">
+    <span class="eyebrow"><span class="beacon"></span>WORKS IN CLAUDE + CHATGPT</span>
+    <h1>The plan panel<br>your AI actually<br><span class="accent">keeps.</span></h1>
+    <p class="sub">A persistent, interactive to-do panel inside Claude or ChatGPT. <b>Check off tasks yourself</b>, the AI ticks its own as it finishes, and everything <b>survives restarts</b> and syncs across devices.</p>
+
+    <div class="ctas">
+      <button class="btn-primary" data-open-connect="#hero-connect">Connect Wingman Cloud</button>
+      <a class="btn-secondary" href="https://github.com/adeoluwaadesina/wingman-mcp">View on GitHub</a>
+    </div>
+    <div class="trust">MIT LICENSE &middot; OPEN SOURCE &middot; NO INSTALL REQUIRED</div>
+
+    <div class="connect-card" id="hero-connect">
+      <div class="cc-head">
+        <span class="cc-title">Connect Wingman Cloud</span>
+        <button class="cc-close" data-close-connect aria-label="Close">&times;</button>
+      </div>
+      <div class="hostpick">
+        <button class="pill active" data-host="claude">Claude</button>
+        <button class="pill" data-host="chatgpt">ChatGPT</button>
+      </div>
+      <div class="urlbar">
+        <span class="url">https://wingman-mcp.onrender.com/mcp</span>
+        <button class="copy-btn">Copy</button>
+      </div>
+      <div class="steps"></div>
+    </div>
+  </div>
+
+  <div class="right">
+    <div class="glow"></div>
+    <div class="panel-mock">
+      <div class="panel-titlebar">
+        <div class="name"><span class="beacon"></span>Migrate billing to Stripe</div>
+        <div class="meta">6 / 9 DONE</div>
+      </div>
+      <div class="tape-mini">
+        <div class="seg done"></div><div class="seg done"></div><div class="seg done"></div><div class="seg done"></div>
+        <div class="seg done"></div><div class="seg done"></div><div class="seg active"></div><div class="seg"></div><div class="seg"></div>
+      </div>
+      <div class="tape-readout"><span>TASK 07 / 09</span><span class="pct">67%</span></div>
+      <div class="task-row done"><div class="rail done"></div><div class="check done">&check;</div><div class="label">Audit existing payment schema</div><div class="tag">DONE</div></div>
+      <div class="task-row done"><div class="rail done"></div><div class="check done">&check;</div><div class="label">Add Stripe SDK + env config</div><div class="tag">DONE</div></div>
+      <div class="task-row done"><div class="rail done"></div><div class="check done">&check;</div><div class="label">Write webhook handler</div><div class="tag">DONE</div></div>
+      <div class="task-row active"><div class="rail active"></div><div class="check"></div><div class="label">Backfill customer records</div><div class="tag">IN PROGRESS</div></div>
+      <div class="task-row"><div class="rail"></div><div class="check"></div><div class="label">Update invoice PDF template</div><div class="tag">QUEUED</div></div>
+      <div class="task-row"><div class="rail"></div><div class="check"></div><div class="label">QA on staging</div><div class="tag">QUEUED</div></div>
+    </div>
+  </div>
+</div>
+
+<section id="how-it-works">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="label">How it works</span>
+      <h2>Describe what you're working on. Claude builds the plan.</h2>
+      <p>The panel mounts inline in the conversation, right where you're already talking.</p>
+    </div>
+
+    <div class="how-steps">
+      <div class="how-step">
+        <div class="num">01</div>
+        <h3>Ask for a plan</h3>
+        <p>Tell Claude or ChatGPT what you're working on. It creates the plan and the panel mounts inline with tasks already populated.</p>
+      </div>
+      <div class="how-step">
+        <div class="num">02</div>
+        <h3>Work through it together</h3>
+        <p>Click a checkbox yourself, or let the AI tick tasks off as it finishes them. Drag to reorder, mark work in progress.</p>
+      </div>
+      <div class="how-step">
+        <div class="num">03</div>
+        <h3>Pick up anywhere</h3>
+        <p>The plan survives restarts and new conversations. With Wingman Cloud, it's on your phone too.</p>
+      </div>
+    </div>
+
+    <div class="demo-frame">
+      <img src="assets/wingman-demo.gif" alt="Wingman panel demo: tasks checking off with an animated settle, progress counter updating" loading="lazy">
+    </div>
+  </div>
+</section>
+
+<section id="features">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="label">Why Wingman</span>
+      <h2>Built to actually get used</h2>
+    </div>
+
+    <div class="features">
+      <div class="feature">
+        <div class="icon">1</div>
+        <h3>Survives restarts</h3>
+        <p>Plans persist across conversation restarts and new sessions, not just the current chat window.</p>
+      </div>
+      <div class="feature">
+        <div class="icon">2</div>
+        <h3>Syncs everywhere</h3>
+        <p>Wingman Cloud keeps plans in sync across every device and assistant you use.</p>
+      </div>
+      <div class="feature">
+        <div class="icon">3</div>
+        <h3>Claude and ChatGPT</h3>
+        <p>One server, both hosts. Connect once and the interactive panel renders inline in either.</p>
+      </div>
+      <div class="feature">
+        <div class="icon">4</div>
+        <h3>You're in control</h3>
+        <p>Click checkboxes yourself, or let the AI tick tasks off as it completes work. Either of you can edit anytime.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="final-cta">
+  <div class="wrap" style="max-width:520px;">
+    <span class="label">Get started</span>
+    <h2 style="font-size:28px;font-weight:800;margin:10px 0 0;">Connect Wingman Cloud</h2>
+    <p style="color:var(--text-muted);font-size:14.5px;margin:10px 0 0;">No install. One URL. Works in Claude and ChatGPT.</p>
+
+    <div class="connect-card open" id="final-connect" style="margin-top:24px;">
+      <div class="hostpick">
+        <button class="pill active" data-host="claude">Claude</button>
+        <button class="pill" data-host="chatgpt">ChatGPT</button>
+      </div>
+      <div class="urlbar">
+        <span class="url">https://wingman-mcp.onrender.com/mcp</span>
+        <button class="copy-btn">Copy</button>
+      </div>
+      <div class="steps"></div>
+    </div>
+
+    <div class="ctas" style="justify-content:center;margin-top:20px;">
+      <a class="btn-secondary" href="https://github.com/adeoluwaadesina/wingman-mcp">View on GitHub</a>
+    </div>
+  </div>
+</section>
+
+<footer class="wrap">
+  <div class="brand"><img src="assets/wingman-icon.png" alt="" style="width:18px;height:18px;border-radius:4px;"><span>Wingman</span></div>
+  <nav>
+    <a href="https://github.com/adeoluwaadesina/wingman-mcp">GitHub</a>
+    <a href="https://github.com/adeoluwaadesina/wingman-mcp#readme">Full docs</a>
+    <a href="https://pypi.org/project/wingman-mcp/">PyPI</a>
+  </nav>
+  <div class="license">MIT &copy; 2026 Adeolu Adesina</div>
+</footer>
+
+<script src="site.js"></script>
+</body>
+</html>
