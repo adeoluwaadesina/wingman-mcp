@@ -365,7 +365,7 @@ Follows your theme automatically, and the sun toggle cycles auto - light - dark.
 </tr>
 </table>
 
-> These are the live panel rendered exactly as it appears in Claude. Asset files live in [`docs/assets/`](docs/assets/); the animated hero loop and 3-step connect GIF are captured from the explainer per [`docs/launch/connect-walkthrough.md`](docs/launch/connect-walkthrough.md).
+> These are the live panel rendered exactly as it appears in Claude. Asset files live in [`docs/assets/`](docs/assets/); the animated hero loop and 3-step connect GIF are captured from the explainer per [`internal-launch/connect-walkthrough.md`](internal-launch/connect-walkthrough.md).
 
 <br/>
 
